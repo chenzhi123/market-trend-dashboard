@@ -71,6 +71,32 @@ footer { text-align: center; color: var(--muted); font-size: 12px; padding: 16px
 .badge { display: inline-block; padding: 2px 10px; border-radius: 999px; font-weight: 700;
   color: var(--c); border: 1px solid var(--c); background: color-mix(in srgb, var(--c) 12%, transparent); }
 
+/* 结论速览 */
+.hero { background: linear-gradient(180deg, #151d2e, var(--panel)); border: 1px solid #2c3a58; border-radius: 12px; padding: 18px 20px 16px; }
+.hero-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 12px; }
+.hero-head h2 { margin: 0 0 4px; font-size: 20px; }
+.hero-table { display: flex; flex-direction: column; gap: 6px; }
+.hero-row { display: grid; grid-template-columns: 200px repeat(3, 1fr); gap: 8px; align-items: stretch; }
+.hero-colhead { color: var(--muted); font-size: 13px; font-weight: 600; }
+.hero-colhead > div { padding: 0 4px; }
+.hero-mkt { margin-top: 8px; font-size: 12px; color: var(--muted); border-bottom: 1px solid var(--line); padding-bottom: 4px; }
+.hero-mkt > div:first-child { color: var(--accent); font-weight: 700; font-size: 13px; }
+.hero-item { cursor: pointer; border-radius: 8px; }
+.hero-item:hover .vcell, .hero-item:hover .hero-name { filter: brightness(1.18); }
+.hero-name { background: var(--panel2); border-radius: 8px; padding: 8px 12px; line-height: 1.45; }
+.hero-name b { font-size: 15px; }
+.vcell { border-radius: 8px; padding: 8px 14px; display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  background: color-mix(in srgb, var(--c) 16%, var(--panel2)); border-left: 4px solid var(--c); }
+.vcell .big { font-size: 24px; font-weight: 800; color: var(--c); letter-spacing: 2px; }
+.vmeta { display: flex; align-items: center; gap: 8px; }
+.vscore { font-size: 18px; font-weight: 700; color: var(--c); min-width: 40px; text-align: right; }
+.conf { width: 60px; height: 6px; background: rgba(255, 255, 255, .08); border-radius: 3px; overflow: hidden; }
+.conf i { display: block; height: 100%; background: var(--c); }
+.zone-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; }
+.zone-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.zone-legend i { width: 12px; height: 12px; border-radius: 3px; }
+.zone-legend em { font-style: normal; color: var(--muted); font-size: 12px; }
+
 /* 表格 */
 table { width: 100%; border-collapse: collapse; }
 th, td { padding: 9px 10px; text-align: left; border-bottom: 1px solid var(--line); }
@@ -118,6 +144,13 @@ td.heat { text-align: center; font-family: var(--mono); font-weight: 600; }
   .meta { display: none; }
   main { padding: 14px 12px; }
   .verdicts, .grid2, .grid4 { grid-template-columns: 1fr; }
+  .hero { padding: 14px 10px; }
+  .hero-row { grid-template-columns: 92px repeat(3, 1fr); gap: 4px; }
+  .hero-name { padding: 6px; font-size: 12px; }
+  .vcell { flex-direction: column; align-items: flex-start; padding: 6px 8px; gap: 2px; }
+  .vcell .big { font-size: 17px; letter-spacing: 0; }
+  .vscore { font-size: 14px; min-width: 0; }
+  .conf { width: 32px; }
   .chart-big { height: 460px; }
   .hide-sm { display: none; }
 }

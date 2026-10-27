@@ -168,6 +168,91 @@ def us_macro() -> dict[str, pd.Series]:
     return out
 
 
+# ---------------- 期权 ----------------
+
+def incremental(name: str, label: str, fetch_one, backfill_days: int = 180,
+                required: list[str] | None = None, retry_days: int = 40) -> pd.DataFrame | None:
+    """按交易日逐日抓取的数据（如每日认沽认购比），只补抓缓存之后的日期。
+    required 中的列缺失时，近 retry_days 天内的这些行会被重新抓取。"""
+    path = CACHE / f"{_safe_name(name)}.csv"
+    old = pd.read_csv(path, parse_dates=["date"]) if path.exists() else None
+    today = pd.Timestamp.now().normalize()
+    if old is not None and required and all(c in old for c in required):
+        incomplete = old[required].isna().any(axis=1) & (old["date"] >= today - pd.Timedelta(days=retry_days))
+        if incomplete.any():
+            old = old[old["date"] < old.loc[incomplete, "date"].min()]
+    start = old["date"].max() + pd.Timedelta(days=1) if old is not None and len(old) else today - pd.Timedelta(days=backfill_days)
+    rows, err = [], None
+    for d in pd.bdate_range(start, today):
+        try:
+            r = fetch_one(d)
+            if r:
+                rows.append({"date": d, **r})
+        except Exception as e:  # noqa: BLE001
+            err = f"{type(e).__name__}: {str(e)[:120]}"
+    df = pd.concat([old, pd.DataFrame(rows)]) if old is not None else pd.DataFrame(rows)
+    if df.empty:
+        STATUS.append({"name": label, "ok": False, "error": err or "无数据"})
+        return None
+    df = df.drop_duplicates("date", keep="last").sort_values("date").reset_index(drop=True)
+    df.to_csv(path, index=False)
+    asof = df["date"].iloc[-1]
+    fresh = (today - asof).days <= 5
+    STATUS.append({"name": label, "ok": fresh, "stale": not fresh, "asof": asof.strftime("%Y-%m-%d"),
+                   **({} if fresh else {"error": err or "数据未更新"})})
+    return df
+
+
+def _cn_option_day(d: pd.Timestamp) -> dict | None:
+    import akshare as ak
+    out, err = {}, None
+    for fn in (ak.option_daily_stats_sse, ak.option_daily_stats_szse):
+        time.sleep(0.5)
+        try:
+            df = fn(date=d.strftime("%Y%m%d"))
+        except Exception as e:  # noqa: BLE001
+            err = e
+            continue
+        if df is None or df.empty:
+            continue
+        for _, r in df.iterrows():
+            code = str(r["合约标的代码"]).zfill(6)
+            out[f"{code}_put"] = float(r["认沽成交量"])
+            out[f"{code}_call"] = float(r["认购成交量"])
+    if not out and err is not None:
+        raise err
+    return out or None
+
+
+def cn_option_pcr() -> pd.DataFrame | None:
+    return incremental("cn_option_pcr", "沪深交易所期权认沽认购比", _cn_option_day,
+                       required=["510300_put", "159919_put"])
+
+
+def _cboe_day(d: pd.Timestamp) -> dict | None:
+    r = requests.get(f"https://cdn.cboe.com/data/us/options/market_statistics/daily/{d:%Y-%m-%d}_daily_options", timeout=20)
+    if r.status_code != 200:
+        return None
+    ratios = {x["name"]: float(x["value"]) for x in r.json().get("ratios", []) if x.get("value") not in (None, "")}
+    keys = {"TOTAL PUT/CALL RATIO": "total", "INDEX PUT/CALL RATIO": "index", "EQUITY PUT/CALL RATIO": "equity"}
+    out = {v: ratios[k] for k, v in keys.items() if k in ratios}
+    return out or None
+
+
+def cboe_pcr() -> pd.DataFrame | None:
+    return incremental("cboe_pcr", "CBOE认沽认购比", _cboe_day)
+
+
+def qvix(symbol: str) -> pd.Series | None:
+    def run():
+        import akshare as ak
+        df = getattr(ak, f"index_option_{symbol}_qvix")()
+        df = df[["date", "close"]].rename(columns={"close": "value"})
+        return df[pd.to_numeric(df["value"], errors="coerce") > 0]
+    df = cached(f"qvix_{symbol}", f"期权波动率QVIX·{symbol}", run)
+    return None if df is None else df.set_index("date")["value"].astype(float)
+
+
 # ---------------- 估值 ----------------
 
 def valuation(cfg: dict, label: str) -> dict | None:

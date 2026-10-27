@@ -3,13 +3,13 @@ horizons:
   short:
     name: 短期（1-4周）
     days: 28
-    weights: { technical: 0.55, sentiment: 0.25, macro: 0.10, valuation: 0.00, event: 0.10 }
+    weights: { technical: 0.50, sentiment: 0.15, options: 0.15, macro: 0.10, valuation: 0.00, event: 0.10 }
   current_q:
     name: 本季度剩余
-    weights: { technical: 0.35, sentiment: 0.20, macro: 0.25, valuation: 0.10, event: 0.10 }
+    weights: { technical: 0.30, sentiment: 0.15, options: 0.10, macro: 0.25, valuation: 0.10, event: 0.10 }
   next_q:
     name: 下季度
-    weights: { technical: 0.15, sentiment: 0.10, macro: 0.40, valuation: 0.25, event: 0.10 }
+    weights: { technical: 0.15, sentiment: 0.05, options: 0.05, macro: 0.40, valuation: 0.25, event: 0.10 }
 
 # 技术面内部各指标在不同周期的权重
 technical_weights:

@@ -5,6 +5,9 @@
 #     lg_index  —— 乐咕乐股指数估值（symbol 为指数中文名，如 沪深300、上证50、中证500）
 #     lg_market —— 乐咕乐股板块整体估值（symbol 可选 上证 / 深证 / 创业板 / 科创版）
 #     etf_pe    —— 用跟踪 ETF 的当前市盈率（symbol 为 ETF 代码，如 SPY）
+#   options（可选）:
+#     A股：qvix 为期权波动率指数（可选 50etf / 300etf / 500etf / cyb / kcb），pcr 为计算认沽认购比的期权标的 ETF 代码
+#     美股：iv 为隐含波动率指数代码（如 ^VIX / ^VXN / ^VXD）；VIX期限结构、SKEW、CBOE认沽认购比自动加入
 indices:
   - id: hs300
     name: 沪深300
@@ -12,6 +15,7 @@ indices:
     source: sina
     symbol: sh000300
     valuation: { type: lg_index, symbol: 沪深300 }
+    options: { qvix: 300etf, pcr: ["510300", "159919"] }
 
   - id: star
     name: 科创综指
@@ -19,6 +23,7 @@ indices:
     source: sina
     symbol: sh000680
     valuation: { type: lg_market, symbol: 科创版, note: 以科创板整体市盈率代替 }
+    options: { qvix: kcb, pcr: ["588000", "588080"], note: 以科创50ETF期权代替 }
 
   - id: chinext
     name: 创业板指
@@ -26,6 +31,7 @@ indices:
     source: sina
     symbol: sz399006
     valuation: { type: lg_market, symbol: 创业板, note: 以创业板整体市盈率代替 }
+    options: { qvix: cyb, pcr: ["159915"] }
 
   - id: spx
     name: 标普500
@@ -33,6 +39,7 @@ indices:
     source: yf
     symbol: ^GSPC
     valuation: { type: etf_pe, symbol: SPY }
+    options: { iv: ^VIX }
 
   - id: ndx
     name: 纳斯达克100
@@ -40,6 +47,7 @@ indices:
     source: yf
     symbol: ^NDX
     valuation: { type: etf_pe, symbol: QQQ }
+    options: { iv: ^VXN }
 
   - id: dji
     name: 道琼斯指数
@@ -47,6 +55,7 @@ indices:
     source: yf
     symbol: ^DJI
     valuation: { type: etf_pe, symbol: DIA }
+    options: { iv: ^VXD }
 
   - id: sox
     name: 费城半导体
@@ -54,3 +63,4 @@ indices:
     source: yf
     symbol: ^SOX
     valuation: { type: etf_pe, symbol: SOXX }
+    options: { iv: ^VXN, note: 以纳指波动率VXN代替 }

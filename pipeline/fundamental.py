@@ -111,6 +111,79 @@ def dxy_signal(dxy: pd.Series | None, weight: float) -> list[dict]:
     return [_sig("dxy", "美元指数", f"{v:.1f}", _clip(-c * 12, -70, 70), f"近3月 {c:+.1f}%，强美元收紧全球流动性", d, weight)]
 
 
+def oil_signal(wti: pd.Series | None, weight: float) -> list[dict]:
+    if wti is None:
+        return []
+    v, d = _last(wti); c = (v / _ago(wti, 91) - 1) * 100
+    s = wti.dropna()
+    p = float((s[s.index >= s.index[-1] - pd.DateOffset(years=3)] <= v).mean() * 100)
+    if c < -25:
+        sc, note = -20, "油价暴跌，反映需求走弱"
+    else:
+        sc = _clip(-c * 2.2, -70, 50) - max(p - 85, 0) * 2
+        note = "油价上涨推升通胀、压制利润" if c > 5 else "油价回落缓解通胀压力" if c < -5 else "油价平稳"
+    return [_sig("oil", "WTI原油", f"${v:.1f}｜{p:.0f}%分位", sc, f"近3月 {c:+.1f}%，{note}（分位为近3年）", d, weight)]
+
+
+# ---------------- 期权 ----------------
+
+def iv_signal(iv: pd.Series | None, name: str, note: str | None = None, weight: float = 1.5) -> list[dict]:
+    if iv is None or len(iv.dropna()) < 120:
+        return []
+    s = iv.dropna(); v, d = _last(s)
+    p = _pct_rank(s, 3); c = (v / _ago(s, 30) - 1) * 100
+    sc = 0.6 * _clip((50 - p) * 1.2, -70, 70) + 0.4 * _clip(-c, -60, 60)
+    if p > 95:
+        sc += 35
+    state = "恐慌极值，常见反弹窗口" if p > 95 else "隐含波动偏高，避险情绪浓" if p > 75 else "隐含波动偏低，市场平静" if p < 25 else "隐含波动正常"
+    return [_sig("iv", name, f"{v:.1f}｜{p:.0f}%分位", sc,
+                 (note + "；" if note else "") + f"近1月 {c:+.0f}%，{state}（分位为近3年）", d, weight)]
+
+
+def term_signal(vix: pd.Series | None, vix3m: pd.Series | None) -> list[dict]:
+    if vix is None or vix3m is None:
+        return []
+    df = pd.concat([vix, vix3m], axis=1, keys=["a", "b"]).dropna()
+    ratio = df["a"] / df["b"]
+    v, d = _last(ratio)
+    return [_sig("term", "VIX期限结构", f"{v:.2f}", _clip((0.95 - v) * 300, -80, 50),
+                 "VIX/VIX3M，" + ("倒挂：近端恐慌高于远端，短期避险强烈" if v > 1 else "正向结构：市场预期平稳" if v < 0.9 else "接近平坦，警惕情绪转弱"), d)]
+
+
+def skew_signal(skew: pd.Series | None) -> list[dict]:
+    if skew is None:
+        return []
+    v, d = _last(skew)
+    return [_sig("skew", "SKEW尾部风险", f"{v:.0f}", _clip((140 - v) * 2, -40, 40),
+                 "衡量深度虚值认沽需求，" + ("尾部对冲需求旺盛" if v > 145 else "尾部风险定价正常"), d, 0.5)]
+
+
+def pcr_signal(pcr: pd.Series | None, name: str, note: str) -> list[dict]:
+    """认沽/认购比：反向指标，过高代表恐慌、过低代表过度乐观。"""
+    if pcr is None or len(pcr.dropna()) < 20:
+        return []
+    s = pcr.dropna().rolling(5, min_periods=3).mean().dropna()
+    v, d = _last(s)
+    if _stale_months(d) > 0.4:
+        return []
+    hist = s[s.index >= s.index[-1] - pd.DateOffset(years=1)]
+    p = float((hist <= v).mean() * 100)
+    return [_sig("pcr", name, f"{v:.2f}｜{p:.0f}%分位", _clip((p - 50) * 1.1, -55, 55),
+                 f"{note}，5日均值在近一年（样本{len(hist)}日）的分位；" +
+                 ("偏高：避险过度，逆向偏多" if p > 70 else "偏低：看涨情绪过热，逆向偏空" if p < 30 else "正常"), d)]
+
+
+def cn_pcr_series(df: pd.DataFrame | None, codes: list[str]) -> pd.Series | None:
+    if df is None:
+        return None
+    df = df.set_index("date")
+    puts = [f"{c}_put" for c in codes if f"{c}_put" in df]
+    calls = [f"{c}_call" for c in codes if f"{c}_call" in df]
+    if not puts or not calls:
+        return None
+    return df[puts].sum(axis=1, min_count=len(puts)) / df[calls].sum(axis=1, min_count=len(calls)).replace(0, np.nan)
+
+
 # ---------------- 情绪 ----------------
 
 def vix_signal(vix: pd.Series | None, weight: float = 1.0) -> list[dict]:

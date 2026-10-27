@@ -7,7 +7,8 @@ import pandas as pd
 from . import technical as ta
 from .events import applies
 
-GROUP_NAMES = {"technical": "技术面", "macro": "宏观面", "sentiment": "情绪资金", "valuation": "估值", "event": "事件"}
+GROUP_NAMES = {"technical": "技术面", "macro": "宏观面", "sentiment": "情绪资金", "options": "期权",
+               "valuation": "估值", "event": "事件"}
 
 
 def quarter_window(today: date) -> dict[str, tuple[date, date]]:

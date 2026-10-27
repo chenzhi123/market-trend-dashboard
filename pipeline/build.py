@@ -67,17 +67,48 @@ def main() -> None:
     us = fetch.us_macro()
     vix = fetch.yf_close("^VIX", "VIX恐慌指数")
     dxy = fetch.yf_close("DX-Y.NYB", "美元指数")
+    wti = fetch.yf_close("CL=F", "WTI原油")
+    brent = fetch.yf_close("BZ=F", "布伦特原油")
+    print("抓取期权数据…")
+    vix3m = fetch.yf_close("^VIX3M", "VIX3M")
+    skew = fetch.yf_close("^SKEW", "SKEW指数")
+    cboe = fetch.cboe_pcr()
+    cn_opt = fetch.cn_option_pcr()
     events = load_events(today)
 
-    us_macro = fd.us_macro_signals(us) + fd.dxy_signal(dxy, 0.6)
-    cn_macro = fd.cn_macro_signals(cn) + fd.dxy_signal(dxy, 1.0)
+    us_macro = fd.us_macro_signals(us) + fd.dxy_signal(dxy, 0.6) + fd.oil_signal(wti, 1.0)
+    cn_macro = fd.cn_macro_signals(cn) + fd.dxy_signal(dxy, 1.0) + fd.oil_signal(wti, 0.8)
     for s in us_macro:
         if s["key"] in ("us10y", "us_ffr"):
             cn_macro.append({**s, "name": s["name"] + "（外部）", "weight": 0.5})
     hy = fd.hy_signal(us.get("BAMLH0A0HYM2"))
-    sent_base = {"US": fd.vix_signal(vix) + hy, "CN": fd.margin_signal(cn.get("cn_margin")) + fd.vix_signal(vix, 0.5)}
+    sent_base = {"US": hy, "CN": fd.margin_signal(cn.get("cn_margin")) + fd.vix_signal(vix, 0.5)}
     macro_by_mkt = {"CN": cn_macro, "US": us_macro}
     rf_by_mkt = {"CN": cn.get("cn10y"), "US": us.get("DGS10")}
+    cboe_eq = None if cboe is None or "equity" not in cboe else cboe.set_index("date")["equity"]
+    us_opt_base = (fd.term_signal(vix, vix3m) + fd.skew_signal(skew)
+                   + fd.pcr_signal(cboe_eq, "CBOE个股认沽认购比", "全美个股期权成交量口径"))
+    iv_cache: dict[str, pd.Series | None] = {"^VIX": vix}
+
+    def option_signals(c: dict) -> list[dict]:
+        o = c.get("options") or {}
+        note = o.get("note")
+        if c["market"] == "US":
+            sym = o.get("iv")
+            if sym and sym not in iv_cache:
+                iv_cache[sym] = fetch.yf_close(sym, f"隐含波动率{sym}")
+            iv = fd.iv_signal(iv_cache.get(sym), f"隐含波动率 {sym}", note) if sym else []
+            return iv + us_opt_base
+        out = []
+        if o.get("qvix"):
+            key = f"qvix_{o['qvix']}"
+            if key not in iv_cache:
+                iv_cache[key] = fetch.qvix(o["qvix"])
+            out += fd.iv_signal(iv_cache[key], "期权波动率QVIX", note)
+        if o.get("pcr"):
+            out += fd.pcr_signal(fd.cn_pcr_series(cn_opt, [str(x) for x in o["pcr"]]),
+                                 "ETF期权认沽认购比", "标的 " + "/".join(map(str, o["pcr"])) + " 成交量口径")
+        return out
 
     summary_items = []
     for c in idx_cfg:
@@ -93,6 +124,7 @@ def main() -> None:
         val = fetch.valuation(c["valuation"], c["name"]) if c.get("valuation") else None
         val_sigs = fd.valuation_signals(val, rf_by_mkt[mkt], px, c.get("valuation", {}).get("note"))
         sent_sigs = sent_base[mkt] + fd.turnover_signal(px)
+        opt_sigs = option_signals(c)
         last_date = ind.index[-1]
         stale = (pd.Timestamp(today) - last_date).days > 5
 
@@ -104,6 +136,7 @@ def main() -> None:
                 "technical": model.technical_signals(ind, sig, tw),
                 "macro": macro_by_mkt[mkt],
                 "sentiment": sent_sigs,
+                "options": opt_sigs,
                 "valuation": val_sigs,
                 "event": ev_sigs,
             }
@@ -160,10 +193,17 @@ def main() -> None:
                "失业率": _series_points(us.get("UNRATE")), "10年期美债": _series_points(us.get("DGS10"), weekly=True),
                "10Y-2Y利差": _series_points(us.get("T10Y2Y"), weekly=True),
                "高收益债利差": _series_points(us.get("BAMLH0A0HYM2"), weekly=True),
-               "VIX": _series_points(vix, weekly=True), "美元指数": _series_points(dxy, weekly=True)},
+               "VIX": _series_points(vix, weekly=True), "美元指数": _series_points(dxy, weekly=True),
+               "WTI原油": _series_points(wti, weekly=True), "布伦特原油": _series_points(brent, weekly=True),
+               "VIX/VIX3M": _series_points(None if vix3m is None else (vix / vix3m), since="2020-01-01"),
+               "CBOE个股认沽认购比": _series_points(cboe_eq)},
     }
+    macro_charts["CN"]["300ETF期权QVIX"] = _series_points(iv_cache.get("qvix_300etf"), since="2020-01-01")
+    macro_charts["CN"]["300ETF认沽认购比"] = _series_points(fd.cn_pcr_series(cn_opt, ["510300", "159919"]))
+    hs300_opt = option_signals(next(c for c in idx_cfg if c["market"] == "CN"))
     _dump("macro.json", {"signals": {"CN": cn_macro, "US": us_macro,
-                                     "CN_sent": sent_base["CN"], "US_sent": sent_base["US"]},
+                                     "CN_sent": sent_base["CN"], "US_sent": sent_base["US"],
+                                     "CN_opt": hs300_opt, "US_opt": fd.iv_signal(vix, "隐含波动率 ^VIX") + us_opt_base},
                          "charts": macro_charts})
     _dump("summary.json", {
         "generated_at": now.strftime("%Y-%m-%d %H:%M"), "today": today,

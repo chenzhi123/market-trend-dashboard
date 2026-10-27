@@ -1,7 +1,14 @@
 (() => {
   const HZ = ["short", "current_q", "next_q"];
   const HZ_SHORT = { short: "短期", current_q: "本季度", next_q: "下季度" };
-  const GROUPS = ["technical", "macro", "sentiment", "valuation", "event"];
+  const GROUPS = ["technical", "macro", "sentiment", "options", "valuation", "event"];
+  const ZONES = [
+    { from: 25, to: 100, label: "看多", color: "#ff4d4f" },
+    { from: 10, to: 25, label: "偏多", color: "#ff8a80" },
+    { from: -10, to: 10, label: "中性", color: "#8c97ad" },
+    { from: -25, to: -10, label: "偏空", color: "#5cd6a0" },
+    { from: -100, to: -25, label: "看空", color: "#13c27a" },
+  ];
   const C = { up: "#ff4d4f", down: "#13c27a", muted: "#7d8aa5", line: "#243049", text: "#d6deeb", accent: "#f0b429" };
   const app = document.getElementById("app");
   const state = { summary: null, cache: {}, hz: "current_q", charts: [] };
@@ -77,15 +84,25 @@
     const s = state.summary;
     const upcoming = s.events.filter((e) => e.date >= s.today).slice(0, 10);
     app.innerHTML = `
-      <div class="section-title" style="margin-top:4px">各指数多空结论 <span class="sub">点击卡片查看详情 · 红色偏多，绿色偏空</span></div>
-      <div class="cards">${s.indices.map(cardHTML).join("")}</div>
+      <section class="hero">
+        <div class="hero-head">
+          <div><h2>各指数多空结论</h2>
+            <div class="note">基于各指数最新收盘数据 · 每个交易日收盘后自动刷新 · 点击任一行查看详情</div></div>
+          ${zoneLegend()}
+        </div>
+        ${heroHTML()}
+      </section>
       <div class="section-title">维度得分热力图 <span id="segHost"></span></div>
-      <div class="panel" style="padding:4px 8px"><table id="heat"></table></div>
+      <div class="panel" style="padding:4px 8px;overflow-x:auto"><table id="heat"></table></div>
       <div class="grid2" style="margin-top:14px">
+        <div class="panel"><div class="section-title" style="margin-top:0">多空分布 <span class="sub" id="distSub"></span></div>
+          ${zoneLegend()}<div id="dist" style="height:${s.indices.length * 44 + 60}px;margin-top:8px"></div></div>
         <div class="panel"><div class="section-title" style="margin-top:0">近期重要事件 <a class="sub" href="#/events">全部 →</a></div>
           <div class="ev-list">${upcoming.map(evHTML).join("")}</div></div>
-        <div class="panel"><div class="section-title" style="margin-top:0">多空分布</div><div id="dist" style="height:300px"></div></div>
-      </div>`;
+      </div>
+      <div class="section-title">行情概览</div>
+      <div class="cards">${s.indices.map(cardHTML).join("")}</div>`;
+    document.querySelectorAll(".hero-row").forEach((el) => el.addEventListener("click", () => (location.hash = `#/index/${el.dataset.id}`)));
     document.getElementById("segHost").appendChild(hzSeg(() => { renderHeat(); renderDist(); }));
     s.indices.forEach((it) => {
       const el = document.getElementById(`spark-${it.id}`);
@@ -121,6 +138,47 @@
     </div>`;
   }
 
+  function zoneLegend() {
+    const range = (z) => (z.from === -100 ? `≤ ${z.to}` : z.to === 100 ? `≥ ${z.from}` : `${z.from} ~ ${z.to}`);
+    return `<div class="zone-legend">${[...ZONES].reverse().map((z) =>
+      `<span><i style="background:${z.color}"></i><b style="color:${z.color}">${z.label}</b><em class="num">${range(z)}</em></span>`).join("")}</div>`;
+  }
+
+  function tally(items, h) {
+    const cnt = {};
+    items.forEach((it) => (cnt[it.horizons[h].label] = (cnt[it.horizons[h].label] || 0) + 1));
+    return ZONES.filter((z) => cnt[z.label]).map((z) => `<b style="color:${z.color}">${z.label} ${cnt[z.label]}</b>`).join("　");
+  }
+
+  function heroHTML() {
+    const s = state.summary;
+    const head = `<div class="hero-row hero-colhead"><div></div>${HZ.map((h) =>
+      `<div>${s.horizons[h].name}<div class="note num">${s.horizons[h].window[0]} ~ ${s.horizons[h].window[1]}</div></div>`).join("")}</div>`;
+    const body = [["CN", "A股"], ["US", "美股"]].map(([m, label]) => {
+      const items = s.indices.filter((i) => i.market === m);
+      if (!items.length) return "";
+      return `<div class="hero-row hero-mkt"><div>${label}</div>${HZ.map((h) => `<div>${tally(items, h)}</div>`).join("")}</div>` +
+        items.map((it) => {
+          const st = it.stats;
+          return `<div class="hero-row hero-item" data-id="${it.id}">
+            <div class="hero-name"><b>${esc(it.name)}</b>
+              <div><span class="num">${fmt(st.close)}</span> <span class="num ${sgn(st.chg1d)}">${pct(st.chg1d)}</span></div>
+              <div class="note">收盘 ${st.date}${st.stale ? ' <span class="imp-high">未更新</span>' : ""}</div></div>
+            ${HZ.map((h) => {
+              const v = it.horizons[h];
+              return `<div class="vcell ${v.cls}">
+                <div class="big">${v.label}</div>
+                <div class="vmeta"><span class="num vscore">${v.score > 0 ? "+" : ""}${v.score.toFixed(0)}</span>
+                  <span class="conf" title="置信度"><i style="width:${v.confidence}%"></i></span><span class="note num">${v.confidence}%</span></div>
+              </div>`;
+            }).join("")}
+          </div>`;
+        }).join("");
+    }).join("");
+    return `<div class="hero-table">${head}${body}</div>
+      <div class="note" style="margin-top:8px">分数范围 -100 ~ +100；进度条为置信度，越长说明各维度信号越一致。</div>`;
+  }
+
   function renderHeat() {
     const s = state.summary;
     const h = state.hz;
@@ -146,17 +204,34 @@
     const el = document.getElementById("dist");
     const old = state.charts.find((c) => c.getDom() === el);
     if (old) { old.dispose(); state.charts = state.charts.filter((c) => c !== old); }
-    const rows = [...s.indices].sort((a, b) => a.horizons[state.hz].score - b.horizons[state.hz].score);
+    const h = state.hz;
+    document.getElementById("distSub").textContent = s.horizons[h].name;
+    const rows = [...s.indices].sort((a, b) => a.horizons[h].score - b.horizons[h].score);
+    const zoneColor = (v) => ZONES.find((z) => v >= z.from).color;
     chart(el).setOption({
-      grid: { left: 90, right: 30, top: 10, bottom: 24 },
-      xAxis: { type: "value", min: -100, max: 100, splitLine: { lineStyle: { color: C.line } }, axisLabel: { color: C.muted } },
-      yAxis: { type: "category", data: rows.map((r) => r.name), axisLabel: { color: C.text }, axisLine: { lineStyle: { color: C.line } } },
-      tooltip: { trigger: "axis", axisPointer: { type: "shadow" } },
-      series: [{ type: "bar", barWidth: 14, data: rows.map((r) => ({ value: r.horizons[state.hz].score,
-        itemStyle: { color: r.horizons[state.hz].score >= 0 ? C.up : C.down, borderRadius: 3 } })),
-        label: { show: true, position: "right", color: C.text, formatter: (p) => p.value.toFixed(1) },
-        markLine: { silent: true, symbol: "none", lineStyle: { color: C.muted, type: "dashed" },
-          data: [{ xAxis: 10 }, { xAxis: -10 }, { xAxis: 25 }, { xAxis: -25 }] } }],
+      grid: { left: 96, right: 24, top: 28, bottom: 28 },
+      xAxis: { type: "value", min: -100, max: 100, interval: 25, splitLine: { show: false },
+        axisLabel: { color: C.muted, fontSize: 12 }, axisLine: { show: true, lineStyle: { color: C.line } } },
+      yAxis: { type: "category", data: rows.map((r) => r.name), axisTick: { show: false },
+        axisLabel: { color: C.text, fontSize: 13, fontWeight: 600 }, axisLine: { lineStyle: { color: C.line } } },
+      tooltip: { trigger: "axis", axisPointer: { type: "shadow" }, backgroundColor: "#121826", borderColor: C.line, textStyle: { color: C.text },
+        formatter: (p) => { const r = rows[p[0].dataIndex].horizons[h]; return `${p[0].name}<br>${r.label} ${r.score.toFixed(1)} · 置信度 ${r.confidence}%`; } },
+      series: [{
+        type: "bar", barWidth: 18,
+        data: rows.map((r) => ({ value: r.horizons[h].score, itemStyle: { color: zoneColor(r.horizons[h].score), borderRadius: 3 } })),
+        label: { show: true, fontSize: 13, fontWeight: 700, color: C.text,
+          position: "right", formatter: (p) => `${p.value > 0 ? "+" : ""}${p.value.toFixed(0)} ${rows[p.dataIndex].horizons[h].label}` },
+        labelLayout: (p) => {
+          if (rows[p.dataIndex].horizons[h].score >= 0) return {};
+          return p.rect.x - 72 < 96 ? { x: p.rect.x + p.rect.width + 6, align: "left" } : { x: p.rect.x - 6, align: "right" };
+        },
+        markArea: { silent: true, data: ZONES.map((z) => [
+          { xAxis: z.from, itemStyle: { color: z.color, opacity: 0.07 },
+            label: { show: true, position: "insideTop", distance: -20, color: z.color, fontSize: 12, fontWeight: 700, formatter: z.label } },
+          { xAxis: z.to }]) },
+        markLine: { silent: true, symbol: "none", label: { show: false }, lineStyle: { color: "#3a4a6b", type: "dashed" },
+          data: [{ xAxis: -25 }, { xAxis: -10 }, { xAxis: 10 }, { xAxis: 25 }] },
+      }],
     });
   }
 
@@ -302,8 +377,11 @@
     const block = (title, mk) => `
       <div class="section-title">${title}</div>
       <div class="grid2">
-        <div class="panel"><div class="group-title" style="margin-top:0">宏观信号</div>${signalTable(m.signals[mk])}</div>
-        <div class="panel"><div class="group-title" style="margin-top:0">情绪与资金信号</div>${signalTable(m.signals[mk + "_sent"])}</div>
+        <div class="panel"><div class="group-title" style="margin-top:0">宏观信号（含油价）</div>${signalTable(m.signals[mk])}</div>
+        <div>
+          <div class="panel"><div class="group-title" style="margin-top:0">期权信号${mk === "CN" ? "（沪深300）" : "（标普500）"}</div>${signalTable(m.signals[mk + "_opt"] || [])}</div>
+          <div class="panel" style="margin-top:14px"><div class="group-title" style="margin-top:0">情绪与资金信号</div>${signalTable(m.signals[mk + "_sent"])}</div>
+        </div>
       </div>
       <div class="grid4" style="margin-top:14px">${Object.keys(m.charts[mk]).map((k, i) => `<div class="panel" style="padding:10px"><div class="note">${k}</div><div class="mini-chart" id="mc-${mk}-${i}"></div></div>`).join("")}</div>`;
     app.innerHTML = block("中国宏观", "CN") + block("美国宏观", "US");
@@ -362,8 +440,9 @@
       <h3>各维度说明</h3>
       <ul>
         <li><b>技术面</b>：均线（20/60/120/250日，含偏离度与斜率）、均线排列、MACD、RSI、布林带、量价配合、动量、ADX。偏离度与动量按指数自身的历史波动率标准化，避免高波动指数被过度打分。短期侧重MACD、RSI与20日线，季度侧重60日线与均线排列，下季度侧重年线与120日动量。</li>
-        <li><b>宏观面</b>：中国看PMI、PPI、CPI、M1-M2剪刀差、社融、10年国债收益率，以及美元与美债等外部因素；美国看联邦基金利率、CPI、萨姆规则失业率、10年美债、期限利差、金融条件指数NFCI、美元。</li>
-        <li><b>情绪资金</b>：VIX、高收益债利差、两市融资余额变化、成交活跃度分位（极端过热时反向扣分）。</li>
+        <li><b>宏观面</b>：中国看PMI、PPI、CPI、M1-M2剪刀差、社融、10年国债收益率，以及美元与美债等外部因素；美国看联邦基金利率、CPI、萨姆规则失业率、10年美债、期限利差、金融条件指数NFCI、美元。两地都纳入WTI原油：近3月涨幅越大、价格分位越高，通胀和成本压力越大，得分越低；暴跌时视为需求走弱。</li>
+        <li><b>情绪资金</b>：高收益债利差、两市融资余额变化、成交活跃度分位（极端过热时反向扣分），A股另参考VIX代表的全球风险偏好。</li>
+        <li><b>期权</b>：隐含波动率（A股为QVIX，美股为VIX/VXN/VXD）的近3年分位与近1月变化，波动率处于极端高位时视为恐慌见底、反向加分；美股另看VIX期限结构（VIX/VIX3M，倒挂代表短期恐慌）、SKEW尾部风险，以及CBOE个股认沽认购比；A股看对应ETF期权的认沽认购比。认沽认购比为反向指标：偏高说明避险过度，偏低说明看涨过热。</li>
         <li><b>估值</b>：A股使用市盈率/市净率近10年分位和股债性价比分位；美股使用跟踪ETF的市盈率计算股债性价比，并辅以价格偏离3年均值的历史分位。</li>
         <li><b>事件</b>：周期内的重大事件会降低置信度。如在 <code>config/events.yaml</code> 中为事件填写 bias（影响方向），该判断会计入事件维度得分。</li>
       </ul>
