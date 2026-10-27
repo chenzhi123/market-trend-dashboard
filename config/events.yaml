@@ -1,0 +1,20 @@
+# 宏观事件日历（手工维护 + 程序自动补充周期性事件）
+#   market: CN / US / ALL
+#   importance: high / medium / low   —— high 事件临近时会降低结论置信度
+#   bias: -100 ~ 100，可选。你对该事件影响方向的主观判断，会计入“事件”维度得分；不填则只影响置信度
+#   confirmed: false 表示日期为预计，待官方确认
+events:
+  - { date: 2026-10-28, title: 美联储FOMC利率决议, market: ALL, importance: high }
+  - { date: 2026-11-03, title: 美国中期选举, market: US, importance: high }
+  - { date: 2026-11-19, title: 英伟达三季度财报, market: US, importance: high, confirmed: false, note: 影响半导体与纳指 }
+  - { date: 2026-12-09, title: 美联储FOMC利率决议（含点阵图）, market: ALL, importance: high }
+  - { date: 2026-12-08, title: 中央政治局会议（分析研究明年经济工作）, market: CN, importance: high, confirmed: false }
+  - { date: 2026-12-12, title: 中央经济工作会议, market: CN, importance: high, confirmed: false }
+  - { date: 2026-12-18, title: 美股四巫日（季度期权期货交割）, market: US, importance: medium }
+  - { date: 2027-01-13, title: 美股四季报季开启（大型银行）, market: US, importance: medium, confirmed: false }
+  - { date: 2027-01-19, title: 中国四季度及全年GDP, market: CN, importance: medium, confirmed: false }
+  - { date: 2027-01-27, title: 美联储FOMC利率决议, market: ALL, importance: high, confirmed: false }
+  - { date: 2027-02-05, title: 春节长假前最后交易日, market: CN, importance: medium, confirmed: false }
+  - { date: 2027-03-05, title: 全国两会开幕（政府工作报告）, market: CN, importance: high, confirmed: false }
+  - { date: 2027-03-17, title: 美联储FOMC利率决议（含点阵图）, market: ALL, importance: high, confirmed: false }
+  - { date: 2027-03-19, title: 美股四巫日（季度期权期货交割）, market: US, importance: medium }

@@ -1,0 +1,25 @@
+# 打分模型参数。各维度得分范围 -100 ~ +100，按周期加权合成总分。
+horizons:
+  short:
+    name: 短期（1-4周）
+    days: 28
+    weights: { technical: 0.55, sentiment: 0.25, macro: 0.10, valuation: 0.00, event: 0.10 }
+  current_q:
+    name: 本季度剩余
+    weights: { technical: 0.35, sentiment: 0.20, macro: 0.25, valuation: 0.10, event: 0.10 }
+  next_q:
+    name: 下季度
+    weights: { technical: 0.15, sentiment: 0.10, macro: 0.40, valuation: 0.25, event: 0.10 }
+
+# 技术面内部各指标在不同周期的权重
+technical_weights:
+  short:     { ma20: 0.15, macd: 0.20, rsi: 0.15, boll: 0.10, volume: 0.10, mom20: 0.15, adx: 0.15 }
+  current_q: { ma20: 0.10, ma60: 0.20, align: 0.20, macd: 0.10, mom60: 0.20, adx: 0.10, volume: 0.10 }
+  next_q:    { ma120: 0.20, ma250: 0.25, align: 0.25, mom60: 0.10, mom120: 0.20 }
+
+labels:
+  - { min: 25,   label: 看多, cls: bull2 }
+  - { min: 10,   label: 偏多, cls: bull1 }
+  - { min: -10,  label: 中性, cls: neutral }
+  - { min: -25,  label: 偏空, cls: bear1 }
+  - { min: -999, label: 看空, cls: bear2 }

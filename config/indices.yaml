@@ -1,0 +1,56 @@
+# 指数配置：新增指数只需在这里加一项
+#   source: sina（A股，symbol 形如 sh000300 / sz399006）或 yf（Yahoo Finance，symbol 形如 ^GSPC）
+#   market: CN 或 US，决定使用哪一套宏观与情绪指标
+#   valuation.type:
+#     lg_index  —— 乐咕乐股指数估值（symbol 为指数中文名，如 沪深300、上证50、中证500）
+#     lg_market —— 乐咕乐股板块整体估值（symbol 可选 上证 / 深证 / 创业板 / 科创版）
+#     etf_pe    —— 用跟踪 ETF 的当前市盈率（symbol 为 ETF 代码，如 SPY）
+indices:
+  - id: hs300
+    name: 沪深300
+    market: CN
+    source: sina
+    symbol: sh000300
+    valuation: { type: lg_index, symbol: 沪深300 }
+
+  - id: star
+    name: 科创综指
+    market: CN
+    source: sina
+    symbol: sh000680
+    valuation: { type: lg_market, symbol: 科创版, note: 以科创板整体市盈率代替 }
+
+  - id: chinext
+    name: 创业板指
+    market: CN
+    source: sina
+    symbol: sz399006
+    valuation: { type: lg_market, symbol: 创业板, note: 以创业板整体市盈率代替 }
+
+  - id: spx
+    name: 标普500
+    market: US
+    source: yf
+    symbol: ^GSPC
+    valuation: { type: etf_pe, symbol: SPY }
+
+  - id: ndx
+    name: 纳斯达克100
+    market: US
+    source: yf
+    symbol: ^NDX
+    valuation: { type: etf_pe, symbol: QQQ }
+
+  - id: dji
+    name: 道琼斯指数
+    market: US
+    source: yf
+    symbol: ^DJI
+    valuation: { type: etf_pe, symbol: DIA }
+
+  - id: sox
+    name: 费城半导体
+    market: US
+    source: yf
+    symbol: ^SOX
+    valuation: { type: etf_pe, symbol: SOXX }
