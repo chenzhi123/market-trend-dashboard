@@ -564,7 +564,7 @@
       ${sub.pending.length ? `<div class="warn-box">Substack 有 <b>${sub.pending.length}</b> 篇新帖子尚未录入计划：
         ${sub.pending.map((p) => `<a class="link" href="${p.url}" target="_blank">${p.date} ${esc(p.title)}</a>`).join("；")}
         <div class="note">在 Cursor 中说「更新个股」即可提取并录入。</div></div>` : ""}
-      ${sub.ok ? "" : `<div class="note">Substack 暂时无法访问，帖子列表使用上次同步的结果（${esc(sub.error)}）。</div>`}
+      ${sub.ok ? "" : `<div class="note" title="${esc(sub.error)}">云端无法访问 Substack，「待录入」以上次在本机同步的结果为准；发新帖后在 Cursor 中说「更新个股」即可。</div>`}
       <div class="section-title">已进入买入 / 加仓区间 <span class="sub">${buy.length} 只 · 「新」表示 3 天内新进入该状态</span></div>
       <div class="panel alerts">${buy.length ? buy.map((s) => alertRow(s, d)).join("") : '<div class="note">暂无</div>'}</div>
       <div class="grid2" style="margin-top:14px">
