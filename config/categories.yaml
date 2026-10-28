@@ -1,0 +1,24 @@
+# 个股计划页的分组方式。前端的「分组」下拉框按此顺序列出。
+#
+# key     对应 watchlist.yaml 中 tags 下的键；key 为 status 时按实时计算的状态分组
+# order   组的显示顺序，未列出的组排在最后
+# 新增分组维度：在这里加一项，再给 watchlist.yaml 中每只标的的 tags 补上同名键即可。
+
+default: industry
+
+dimensions:
+  - key: industry
+    name: 行业
+    order: [存储, 半导体设备, 晶圆代工, 网络与定制芯片, AI服务器与电子制造, AI云与算力, AI大模型, 卫星通信, 电力与公用事业, 核能与铀, 传统能源]
+
+  - key: chain
+    name: AI产业链环节
+    order: [上游制造与设备, 芯片与存储, 系统与硬件, 算力云, 模型与应用, 能源电力, 连接与通信]
+
+  - key: market
+    name: 市场
+    order: [美股, 港股, 美股ETF]
+
+  - key: status
+    name: 当前状态
+    order: [跌破计划区, 深度加仓区, 加仓区, 主要买入区, 试探建仓区, 接近买入区, 观望, 重新评估区, 兑现区, 无行情]

@@ -1,0 +1,585 @@
+# 个股计划清单：每只标的的情景目标价与价格纪律，来源为 Substack「Zane说美股」。
+#
+# 字段说明
+#   symbol        yfinance 代码（港股如 0100.HK）
+#   kind          stock | etf（ETF 通常没有目标价，只有分批区间）
+#   tags          分组标签，键名需与 config/categories.yaml 中的维度一致
+#   target_year   目标价对应的时点（多数为 2027 年底）
+#   targets       bear / base / bull 三档情景目标价，帖子没给就留空
+#   ref           帖子写作时的参考价
+#   zones         价格区间。买入侧类型：starter 试探/第一档、buy 主要买入、add 加仓、deep 深度加仓（需复核）
+#                 卖出侧类型：reassess 重新评估/停止加仓、trim 分批兑现
+#                 low / high 为价格边界（含），只有一侧时另一侧留空；size 为该档占专项资金的比例
+#   reserve       计划中保留不投入的资金比例与用途
+#   guards        执行复核线：触发后暂停自动执行计划
+#   conditions    计划成立的前提
+#   invalidation  需要下调估值或放弃计划的信号
+#   assumptions   估值关键假设
+#   quotes        原文摘录
+#   posts         来源帖子（最新在前），history 为目标价修订记录
+#
+# ignored_posts：已阅读但不含个股计划的帖子 slug，避免被标为「待录入」。
+
+ignored_posts: []
+
+stocks:
+  # ---------------- 存储 ----------------
+  - ticker: MU
+    symbol: MU
+    name: 美光
+    kind: stock
+    currency: USD
+    tags: {industry: 存储, chain: 芯片与存储, market: 美股}
+    target_year: 2027
+    targets: {bear: 550, base: 1600, bull: 2900}
+    ref: {price: 1065, date: 2026-10-03}
+    summary: 中性1600美元；1000美元附近第一档观察，900—950美元更积极考虑买入。
+    zones:
+      - {type: starter, low: 950, high: 1000, action: 第一档买入观察位置}
+      - {type: buy, low: 900, high: 950, action: 更积极考虑买入（估值折回报告时点再留20%折价≈925）}
+      - {type: reassess, low: 1300, high: 1400, action: 盈利预测未同步上调时，重新评估继续持有的回报空间}
+      - {type: trim, low: 1500, high: 1800, action: 临近2027年底且大体兑现中性假设时的兑现观察区间}
+    conditions:
+      - 后续财报没有明显改变经营预期；出货、价格和盈利指引基本稳定
+      - 暂不写死具体加仓比例，同一价格因不同原因下跌，决策不同
+    invalidation:
+      - 回调伴随订单减少、价格走弱和盈利下修，需先重算，不能拿旧目标价解释新的低股价
+      - 收入和利润率一起明显回落，估值随之下调
+    assumptions:
+      - 中性：FY2027收入约2730亿美元、FY2028约3170亿美元；毛利率由87%降至80%再降至70%
+      - 经营利润法中性约1623美元，自由现金流法约1333美元；按12%要求回报折回≈1157美元
+    quotes:
+      - 假设后续财报没有明显改变经营预期，我会把1000美元附近作为第一档买入观察位置，900—950美元作为更积极考虑的位置。
+      - 至于接近2900美元的乐观估值……我会保留这个情景，但不会用它安排主要的买入计划。
+    posts:
+      - {slug: mu1600950, date: 2026-10-03, title: 美光MU估值：我算到1600美元，想买在950美元}
+    history: []
+
+  - ticker: WDC
+    symbol: WDC
+    name: 西部数据
+    kind: stock
+    currency: USD
+    tags: {industry: 存储, chain: 芯片与存储, market: 美股}
+    target_year: 2027
+    targets: {bear: 200, base: 520, bull: 950}
+    ref: {price: 415.29, date: 2026-10-02}
+    summary: 中性520美元；415美元附近观察为主，350美元附近开始分批，300—320美元进一步加仓。
+    zones:
+      - {type: starter, low: 340, high: 360, action: 考虑开始分批建仓（更关注350附近）}
+      - {type: add, low: 300, high: 320, action: 基本面稳定时进一步加仓，先判断下跌原因}
+      - {type: reassess, low: 500, high: 520, action: 2027年底前提前回到此区间且盈利预期未提高，停止加仓并评估分批减仓}
+    conditions:
+      - 中性盈利判断仍成立：订单、高容量产品放量和利润率没有明显恶化
+      - 正股、无杠杆的条件计划；每次加仓重新检查逻辑，提前设定总投入上限
+    invalidation:
+      - 公司明确下调订单或盈利指引、客户持续推迟采购
+      - 竞争性降价明显侵蚀利润（关注东芝扩产影响），或高容量产品/HAMR在量产和成本上出现重要问题
+    assumptions:
+      - 悲观：2028年收入160亿美元、毛利率44%
+      - 中性：2028年收入205亿美元、毛利率约57%
+      - 乐观：2028年收入255亿美元、毛利率63%
+      - 若中性盈利兑现但市场只给18倍市盈率，对应约393美元
+    quotes:
+      - 415美元附近，观察为主。350美元附近，考虑开始分批布局。300—320美元，基本面稳定的前提下考虑进一步加仓。
+    posts:
+      - {slug: "214", date: 2026-10-05, title: 西部数据深度分析：近一年涨超2倍，上周五盘中暴跌14%，现在是买入时机吗？}
+    history: []
+
+  - ticker: SNDK
+    symbol: SNDK
+    name: 闪迪
+    kind: stock
+    currency: USD
+    tags: {industry: 存储, chain: 芯片与存储, market: 美股}
+    target_year: 2027
+    targets: {bear: 850, base: 2400, bull: 3500}
+    ref: {price: 1482.33, date: 2026-10-13}
+    summary: 中性2400美元；1500—1550美元试仓20%，1350—1450美元分批加仓共60%，跌破1350暂停自动加仓。
+    zones:
+      - {type: starter, low: 1500, high: 1550, action: 第一笔试仓, size: 20%}
+      - {type: buy, low: 1400, high: 1450, action: 先检查需求、合同与盈利预期，稳定则加仓, size: 30%}
+      - {type: add, low: 1350, high: 1400, action: 需要更明确的基本面确认, size: 30%}
+      - {type: reassess, low: 1650, high: 1750, action: 没有盈利上修就降低追涨意愿，不急于补齐仓位}
+      - {type: trim, low: 2300, high: 2500, action: 盈利预期未明显上修时先兑现约三分之一}
+    reserve: 20% 保留，等待下一次财报、合同兑现或企业级出货确认
+    guards:
+      - {below: 1350, note: 跌破1350美元暂停自动加仓，重新检查需求、合同和盈利预测}
+    conditions:
+      - 企业级SSD需求继续增长，NBM长约按预期执行
+    invalidation:
+      - 连续两个季度毛利率低于70%，同时自由现金流率持续低于40%且缺乏改善
+      - 重大客户履约问题或订单明显转弱
+    assumptions:
+      - 中性：FY2028收入520亿美元、毛利率约80%、营业利润率约75%、1.50亿股、EPS约221美元×11倍
+      - 悲观：收入340亿、毛利率60%、9倍；乐观：收入600亿、毛利率82%、1.45亿股、13倍
+      - 中性估值不计入大规模HBF新增利润
+    quotes:
+      - 整体而言，1,350—1,450美元是我更偏好的分批区间。
+      - 价格跌破1,350美元，我会暂停自动加仓，重新检查需求、合同和盈利预测。
+    posts:
+      - {slug: "371500", date: 2026-10-14, title: 闪迪：超级明星股到回撤37%，1,500美元附近值得开始买入吗？}
+    history: []
+
+  # ---------------- 半导体制造 ----------------
+  - ticker: TSM
+    symbol: TSM
+    name: 台积电 ADR
+    kind: stock
+    currency: USD
+    tags: {industry: 晶圆代工, chain: 上游制造与设备, market: 美股}
+    target_year: 2027
+    targets: {bear: 330, base: 550, bull: 750}
+    ref: {price: 422.96, date: 2026-10-15}
+    summary: 中性550美元；400—420美元先投20%，375—395美元投35%为主要布局区，340—360美元复核后投30%。
+    zones:
+      - {type: starter, low: 400, high: 420, action: 第一档试仓，限价等待成交, size: 20%}
+      - {type: buy, low: 375, high: 395, action: 主要布局区间, size: 35%}
+      - {type: add, low: 340, high: 360, action: 先判断下跌原因，订单与盈利预期未恶化才投入, size: 30%}
+      - {type: trim, low: 520, high: 550, action: 2027年EPS预测仍约23美元时兑现约四分之一至三分之一}
+      - {type: trim, low: 650, high: 700, action: 需乐观情景支撑，经营仍接近中性则进一步降仓}
+    reserve: 15% 保留现金，用于后续财报确认或新的市场机会
+    conditions:
+      - 先进制程扩产按计划转化为收入，主要客户维持量产节奏
+    invalidation:
+      - 2027年ADR收益预期降至20美元以下
+      - 毛利率连续两个季度低于63%且缺少清晰的爬坡解释
+      - 主要客户资本开支推迟、先进制程订单延后或量产持续落后
+    assumptions:
+      - 中性：2027年营收2350亿美元、净利率50.5%、ADR收益约22.88美元×24倍
+      - 悲观：营收2050亿、净利率47%、18倍；乐观：营收2600亿、净利率53.5%、28倍
+    quotes:
+      - 我愿意在400—420美元开始建立小仓位，将主要资金留给375—395美元。
+    posts:
+      - {slug: q36913, date: 2026-10-15, title: 台积电Q3最新财报：净利大增69%，股价却回撤逾13%，什么价格值得买？}
+    history: []
+
+  - ticker: LRCX
+    symbol: LRCX
+    name: 泛林集团
+    kind: stock
+    currency: USD
+    tags: {industry: 半导体设备, chain: 上游制造与设备, market: 美股}
+    target_year: 2027
+    targets: {bear: 197, base: 326, bull: 456}
+    ref: {price: 240, date: 2026-10-22}
+    summary: 中性326美元；四档分批（238—245 / 225—235 / 205—220 / 190—200），全部成交均价约222美元。
+    zones:
+      - {type: starter, low: 238, high: 245, action: 第一档试探性仓位, size: 20%}
+      - {type: buy, low: 225, high: 235, action: 更偏好的加仓区间, size: 30%}
+      - {type: add, low: 205, high: 220, action: 行业基本面无明显恶化时重点加仓, size: 30%}
+      - {type: deep, low: 190, high: 200, action: 需重新确认盈利预测、客户资本开支和竞争格局, size: 20%}
+      - {type: trim, low: 350, high: 380, action: 盈利预期未明显上调时快速反弹至此，逐步兑现部分收益}
+    conditions:
+      - 存储厂商设备资本开支、先进制程投资强度维持；营业利润率接近40%
+    invalidation:
+      - 连续两个季度收入指引走弱、营业利润率持续下降，同时主要存储客户下修资本开支
+    assumptions:
+      - 2027年底NTM EPS：悲观8.20×24倍、中性10.20×32倍、乐观12×38倍
+      - EPS 10.20但只给27倍时约275美元
+    quotes:
+      - 我愿意在238—245美元建立第一笔仓位，在225—235美元进一步加仓。
+    posts:
+      - {slug: lrcx8ai, date: 2026-10-22, title: LRCX深度分析：财报超预期却暴跌8%，AI芯片背后的刻蚀设备龙头，现在值得买入吗？}
+    history: []
+
+  - ticker: MRVL
+    symbol: MRVL
+    name: Marvell
+    kind: stock
+    currency: USD
+    tags: {industry: 网络与定制芯片, chain: 芯片与存储, market: 美股}
+    target_year: 2027
+    targets: {bear: 185, base: 380, bull: 560}
+    ref: {price: 275.28, date: 2026-10-09}
+    summary: 中性380美元；230—250美元首选重新建仓（40%），200—220美元基本面完整时再加40%。
+    zones:
+      - {type: buy, low: 230, high: 250, action: 首选重新建仓区间, size: 40%}
+      - {type: add, low: 200, high: 220, action: 客户项目、收入展望和盈利能力完整时进一步加仓, size: 40%}
+      - {type: reassess, low: 340, high: 380, action: 检查剩余回报，考虑兑现部分交易仓位}
+      - {type: trim, low: 400, high: 420, action: 收入与盈利预测未相应上修时进一步减仓}
+      - {type: trim, low: 500, action: 需要乐观情景的经营证据}
+    reserve: 20% 机动资金，用于经营验证后的补充，或继续持有现金
+    conditions:
+      - 长期部分跟随客户项目、每股盈利和现金流；交易部分围绕估值偏离加减
+    invalidation:
+      - FY2028收入展望被明显下调、重要项目连续延后、股数摊薄显著快于预期
+      - 重要客户项目取消或竞争力受损，先调整估值再判断是否买入
+    assumptions:
+      - 估值=FY2029调整后EPS×前瞻市盈率；中性FY2029收入320亿、营业利润率41%、EPS约11.21×34倍
+      - 悲观EPS约7.15×26倍；乐观EPS约14.04×40倍
+    quotes:
+      - 230—250美元投入约40%的计划仓位；200—220美元再投入约40%；剩余20%保留为机动资金。
+    posts:
+      - {slug: marvell160300, date: 2026-10-12, title: 黄仁勋点赞的未来万亿光互联巨头：Marvell：160美元买入、300美元止盈后，我会在什么价格买回来？}
+    history: []
+
+  - ticker: CLS
+    symbol: CLS
+    name: Celestica
+    kind: stock
+    currency: USD
+    tags: {industry: AI服务器与电子制造, chain: 系统与硬件, market: 美股}
+    target_year: 2027
+    targets: {bear: 225, base: 540, bull: 750}
+    ref: {price: 288, date: 2026-10-27}
+    summary: 中性540美元（由460上调）；285—295美元小仓15%，260—280美元为主要加仓区（40%）。
+    zones:
+      - {type: starter, low: 285, high: 295, action: 基础仓位, size: 15%}
+      - {type: buy, low: 260, high: 280, action: 最偏好的加仓区域，2027年指引保持稳定时增加配置, size: 40%}
+      - {type: add, low: 240, high: 260, action: 进一步降低建仓成本, size: 25%}
+      - {type: deep, low: 220, high: 240, action: 仅在主要订单和盈利预期无实质恶化时, size: 10%}
+      - {type: reassess, low: 400, action: 重新评估未来收益与风险比例（约18.6倍2027年EPS）}
+      - {type: trim, low: 520, action: 接近540美元且2028年盈利预期未同步上修，分批兑现}
+    reserve: 10% 留待投资者日及后续财报确认产能投放、交付和利润率后再决定
+    conditions:
+      - 2027年收入400亿美元、调整后营业利润率9%、EPS 21.50美元的指引保持稳定
+    invalidation:
+      - 2027年收入展望降至350亿美元以下，或调整后营业利润率预期回落到8%以下
+      - 核心计算或网络项目重大量产延迟、主要客户采购计划明显变化
+      - 现金流持续恶化且管理层无法提供可信的改善路径
+    assumptions:
+      - 中性：2027年EPS指引21.50美元×25倍；20倍时仅430美元
+      - 悲观：收入320亿、EPS约15×15倍；乐观：收入450亿、EPS 25×30倍
+    quotes:
+      - 我会先建立适度仓位，把主要资金留给260—280美元区间。
+    posts:
+      - {slug: cls168202790, date: 2026-10-27, title: CLS财报超预期，盘前暴涨16.8%：2027年营收或增长90%，现在还能买入吗？}
+    history:
+      - {date: 2026-10-27, slug: cls168202790, note: 中性目标价由460美元上调至540美元（2027年收入指引400亿美元、EPS 21.50美元）}
+
+  # ---------------- AI 算力云 ----------------
+  - ticker: CRWV
+    symbol: CRWV
+    name: CoreWeave
+    kind: stock
+    currency: USD
+    tags: {industry: AI云与算力, chain: 算力云, market: 美股}
+    target_year: 2027
+    targets: {bear: 40, base: 120, bull: 210}
+    ref: {price: 81.58, date: 2026-10-08}
+    summary: 中性120美元；78—82美元小仓试探（≤20%），68—75美元主要建仓（70附近），58—65美元先核查再加仓。
+    zones:
+      - {type: starter, low: 78, high: 82, action: 小仓试探、建立观察仓, size: ≤20%}
+      - {type: buy, low: 68, high: 75, action: 主要建仓区间，尤其70美元附近}
+      - {type: deep, low: 58, high: 65, action: 先确认收入与交付预期、主要客户合同、融资能力，再决定加仓}
+      - {type: trim, low: 110, high: 130, action: 经营预测未明显提高时，重新评估继续持有的回报空间}
+      - {type: reassess, low: 200, action: 需要接近乐观情景的收入兑现与资本回报支撑}
+    conditions:
+      - 原有经营假设成立：容量按时上线，订单持续转化为收入
+    invalidation:
+      - 订单持续增加但计费能力反复延后
+      - 客户需求下降与融资收紧同时发生；每轮增长需要越来越多外部融资
+    assumptions:
+      - 中性：2027年收入240亿美元、EBITDA利润率60%、9.5倍EV/EBITDA、净债务600亿、6.4亿股
+      - 悲观：收入180亿、55%、8.5倍；乐观：收入300亿、63%、11倍
+      - 中性经营兑现但只给8倍时约86美元
+    quotes:
+      - 81.58美元附近，小仓跟踪。68—75美元，重点考虑。
+    posts:
+      - {slug: coreweave77770, date: 2026-10-09, title: CoreWeave大跌7.77%：千亿订单在手，我为什么还要等70美元？}
+    history: []
+
+  - ticker: BRUN
+    symbol: BRUN
+    name: Boost Run
+    kind: stock
+    currency: USD
+    tags: {industry: AI云与算力, chain: 算力云, market: 美股}
+    target_year: 2029
+    targets: {bear: 3.45, base: 24.66, bull: 65.62}
+    ref: {price: 15.51, date: 2026-10-06}
+    summary: 估值看2029年：中性约24.66美元；11—13美元为更有吸引力的分批布局区，长期十倍情景约155美元（2031—2032）。
+    zones:
+      - {type: starter, low: 15, high: 16, action: 可研究性分批参与，但不是高确定性的便宜区}
+      - {type: buy, low: 11, high: 13, action: 更有吸引力的研究与分批布局区间}
+      - {type: reassess, low: 24, high: 25, action: 基本面尚未上修时暂停追价，评估兑现部分收益}
+    conditions:
+      - 中性经营假设不变；Cohere合同按期验收（2027年7月15日节点）
+    invalidation:
+      - 反复延期、退款压力、利润率无法改善
+      - 只能依靠持续大规模发股维持扩张
+    assumptions:
+      - 2029年中性：收入9亿美元、经营EBITDA利润率55%、7.5倍、净债务类义务10亿、1.1亿股
+      - 悲观：收入4.5亿、40%、6倍；乐观：收入18亿、65%、9倍、1.3亿股
+      - 长期十倍情景（2031—2032）：收入约45亿、利润率60%、10倍、1.5亿股，约153—157美元
+    quotes:
+      - 我的2029年中性估值仍然是约25美元，乐观情景约为66美元；更有吸引力的分批布局观察区间，仍在11—13美元附近。
+    posts:
+      - {slug: boost-run526brun, date: 2026-10-06, title: Boost Run深度分析：5.26亿美元大单落地，我为什么把BRUN列入“十倍股”观察名单？}
+    history:
+      - {date: 2026-09-22, note: 三年估值报告（站外）给出3.45 / 24.66 / 65.62美元，10月6日文章沿用未上调}
+
+  # ---------------- AI 大模型 ----------------
+  - ticker: MINIMAX
+    symbol: 0100.HK
+    name: MiniMax
+    kind: stock
+    currency: HKD
+    tags: {industry: AI大模型, chain: 模型与应用, market: 港股}
+    target_year: 2027
+    targets: {bear: 90, base: 325, bull: 740}
+    ref: {price: 240.20, date: 2026-10-07}
+    summary: 中性325港元；200—220港元首笔布局，170—190港元经营假设成立时增加投入。
+    zones:
+      - {type: starter, low: 200, high: 220, action: 首笔布局区}
+      - {type: add, low: 170, high: 190, action: 经营假设仍成立时考虑增加投入}
+      - {type: trim, low: 300, high: 330, action: 估值没有上调时开始评估部分兑现}
+      - {type: reassess, low: 360, high: 400, action: 需要看到比中性预测更强的经营证据}
+    conditions:
+      - 收入继续扩张、毛利率改善、融资资金得到有效使用
+    invalidation:
+      - 收入兑现不足、毛利率恶化、资金消耗超预期时，买入价格需下调甚至暂停使用
+    assumptions:
+      - 中性：2028年收入20亿美元×7倍前瞻收入，2027年底净现金10亿美元，3.6亿股
+      - 按25%年化回报门槛折回当前约247港元
+      - 观察清单：确认收入、API毛利率、净现金消耗、付费客户留存、稀释后总股本
+    quotes:
+      - 对MiniMax，这个起点暂时放在200—220港元。
+    posts:
+      - {slug: minimax, date: 2026-10-08, title: MiniMax跌去八成，智谱回撤逾七成：大模型股票，我愿意付多少钱？}
+    history: []
+
+  - ticker: ZHIPU
+    symbol: 2513.HK
+    name: 智谱
+    kind: stock
+    currency: HKD
+    tags: {industry: AI大模型, chain: 模型与应用, market: 港股}
+    target_year: 2027
+    targets: {bear: 160, base: 830, bull: 1480}
+    ref: {price: 696, date: 2026-10-07}
+    summary: 中性约830港元（含较高平台溢价，7倍时约593）；500—550港元首笔布局，400—450港元增加投入。
+    zones:
+      - {type: starter, low: 500, high: 550, action: 首笔布局区}
+      - {type: add, low: 400, high: 450, action: 经营假设仍成立时考虑增加投入}
+      - {type: trim, low: 800, high: 900, action: 估值没有上调时开始评估部分兑现}
+      - {type: reassess, low: 1000, high: 1100, action: 重新检验是否已经提前支付了过多乐观预期}
+    conditions:
+      - 收入继续扩张、毛利率改善、融资资金得到有效使用
+    invalidation:
+      - 收入兑现不足、毛利率恶化、资金消耗超预期时，买入价格需下调甚至暂停使用
+    assumptions:
+      - 中性：2028年收入50亿美元×10倍前瞻收入，2027年底净现金30亿美元，5亿股
+      - 按25%年化回报门槛折回当前约628港元
+    quotes:
+      - 对智谱，这个起点暂时放在500—550港元。
+    posts:
+      - {slug: minimax, date: 2026-10-08, title: MiniMax跌去八成，智谱回撤逾七成：大模型股票，我愿意付多少钱？}
+    history: []
+
+  # ---------------- 卫星通信 ----------------
+  - ticker: ASTS
+    symbol: ASTS
+    name: AST SpaceMobile
+    kind: stock
+    currency: USD
+    tags: {industry: 卫星通信, chain: 连接与通信, market: 美股}
+    target_year: 2027
+    targets: {bear: 15, base: 55, bull: 120}
+    ref: {price: 50.97, date: 2026-10-09}
+    summary: 中性55美元；40—42美元首笔20%，35—38美元再投30%，其余50%留给经营进展。
+    zones:
+      - {type: starter, low: 40, high: 42, action: 基本面没有恶化、急跌动能减弱时首笔投入, size: 20%}
+      - {type: buy, low: 35, high: 38, action: 部署、收费和融资假设仍成立时再投入, size: 30%}
+      - {type: trim, low: 55, high: 57, action: 商业化预期未明显改善时，仓位偏重者降低部分风险暴露}
+    reserve: 50% 留给收费服务启动、单位收入改善和更清楚的现金消耗路径
+    guards:
+      - {below: 47.6, note: 47.6美元附近再次放量跌破，停止按“周五已见底”的想法加仓}
+    conditions:
+      - 价格进入买入区间后先重查公司，而非自动执行加仓
+    invalidation:
+      - 服务上线延期、实际分成低于预期、后续融资超过模型预留
+      - 竞争导致收入预期下修（SpaceX/Starlink Mobile）
+    assumptions:
+      - 中性：2030年收入32亿美元、EBITDA利润率55%、25倍、18%折现率、净债务30亿、4.3亿份
+      - 倍数由25倍降到20倍时约43美元
+    quotes:
+      - 我的判断维持不变：2027年底中性目标55美元，35—42美元分批考虑。
+    posts:
+      - {slug: asts16spacex51, date: 2026-10-11, title: ASTS深度分析：盘中一度跌超16%，SpaceX逼近，51美元值得抄底吗？}
+    history: []
+
+  # ---------------- AI 电力 ----------------
+  - ticker: VST
+    symbol: VST
+    name: Vistra
+    kind: stock
+    currency: USD
+    tags: {industry: 电力与公用事业, chain: 能源电力, market: 美股}
+    target_year: 2027
+    targets: {bear: 105, base: 195, bull: 285}
+    ref: {price: 160.50, date: 2026-10-06}
+    summary: 中性195美元；148—152美元试探，135—145美元主要建仓，120—130美元需复核下跌原因。
+    zones:
+      - {type: starter, low: 148, high: 152, action: 试探区，建立少量观察仓}
+      - {type: buy, low: 135, high: 145, action: 主要建仓区}
+      - {type: deep, low: 120, high: 130, action: 更高安全边际区，需重新核验下跌原因}
+      - {type: reassess, low: 180, high: 200, action: 盈利预测未上调时，继续加仓吸引力明显下降}
+    conditions:
+      - 利好后的回撤没有伴随盈利预期恶化
+    invalidation:
+      - 长期盈利下修时先调整模型，再确定新的价格区间
+    assumptions:
+      - 中性：2028年EBITDA 88亿美元×10倍、扣减236亿、3.30亿股
+      - 悲观：74亿×8倍；乐观：100亿×11.5倍
+      - 2027年约94%发电量已套保，短期电价上涨对利润弹性有限
+    quotes:
+      - 长期逻辑仍在，但急涨之后，我更愿意在135—145美元建立主要仓位。
+    posts:
+      - {slug: aivstokloxeetf, date: 2026-10-07, title: AI电力投资研究：VST、OKLO、XE与六只美股能源、核能ETF}
+    history: []
+
+  - ticker: OKLO
+    symbol: OKLO
+    name: Oklo
+    kind: stock
+    currency: USD
+    tags: {industry: 核能与铀, chain: 能源电力, market: 美股}
+    target_year: 2027
+    targets: {bear: 12, base: 40, bull: 80}
+    ref: {price: 38.55, date: 2026-10-06}
+    summary: 中性约40美元（低置信度研究锚）；30—33美元小规模试探，25—28美元主要买入区。
+    zones:
+      - {type: starter, low: 30, high: 33, action: 小规模试探}
+      - {type: buy, low: 25, high: 28, action: 主要研究和参与区间}
+      - {type: deep, low: 20, high: 23, action: 重新核验项目与现金消耗后再判断是否增加投入}
+    conditions:
+      - 即使进入买入区间，也保留较小的风险预算
+    invalidation:
+      - 建设成本明显增加时先调整模型
+    assumptions:
+      - 概率加权：远期业务权益价值250亿×成功概率50%，2027年底净现金18亿，2.05亿股，15%折现
+      - 成功概率降至30%时约27美元
+    quotes:
+      - 我关注30—33美元的试探机会，主要买入区间放在25—28美元。
+    posts:
+      - {slug: aivstokloxeetf, date: 2026-10-07, title: AI电力投资研究：VST、OKLO、XE与六只美股能源、核能ETF}
+    history: []
+
+  - ticker: XE
+    symbol: XE
+    name: X-energy
+    kind: stock
+    currency: USD
+    tags: {industry: 核能与铀, chain: 能源电力, market: 美股}
+    target_year: 2027
+    targets: {bear: 4, base: 16, bull: 35}
+    ref: {price: 15.45, date: 2026-10-06}
+    summary: 中性约16美元；12—13美元初步参与，10—11.5美元主要买入区。
+    zones:
+      - {type: starter, low: 12, high: 13, action: 初步参与区}
+      - {type: buy, low: 10, high: 11.5, action: 主要买入区间}
+      - {type: reassess, low: 15, high: 18, action: 等待更多商业化证据，避免单凭板块上涨追加资金}
+    invalidation:
+      - 重要项目延后时先调整模型
+    assumptions:
+      - 中性：2030年收入15亿美元×7倍、16%折现、资金消耗现值6亿、净现金11亿、4.5亿股
+      - 收入每少5亿约降5.5美元；倍数每降1倍约降2.1美元
+    quotes:
+      - 我关注12—13美元的初步参与机会，主要买入区间放在10—11.5美元。
+    posts:
+      - {slug: aivstokloxeetf, date: 2026-10-07, title: AI电力投资研究：VST、OKLO、XE与六只美股能源、核能ETF}
+    history: []
+
+  - ticker: NLR
+    symbol: NLR
+    name: 核能与铀 ETF（VanEck）
+    kind: etf
+    currency: USD
+    tags: {industry: 核能与铀, chain: 能源电力, market: 美股ETF}
+    ref: {price: 109.43, date: 2026-10-06}
+    summary: 核能全产业链一篮子；100—104美元第一批，92—98美元主要买入区。持有NLR再买OKLO/XE会叠加敞口。
+    zones:
+      - {type: starter, low: 100, high: 104, action: 第一批}
+      - {type: buy, low: 92, high: 98, action: 主要买入区}
+    conditions:
+      - ETF区间为回撤预算与分批建仓规则，并非精确内在价值
+    posts:
+      - {slug: aivstokloxeetf, date: 2026-10-07, title: AI电力投资研究：VST、OKLO、XE与六只美股能源、核能ETF}
+    history: []
+
+  - ticker: XLU
+    symbol: XLU
+    name: 公用事业 ETF（SPDR）
+    kind: etf
+    currency: USD
+    tags: {industry: 电力与公用事业, chain: 能源电力, market: 美股ETF}
+    ref: {price: 41.16, date: 2026-10-06}
+    summary: 相对稳健的电力行业配置；39—40美元第一批，36.5—38.5美元主要买入区。
+    zones:
+      - {type: starter, low: 39, high: 40, action: 第一批}
+      - {type: buy, low: 36.5, high: 38.5, action: 主要买入区}
+    conditions:
+      - ETF区间为回撤预算与分批建仓规则，并非精确内在价值
+    posts:
+      - {slug: aivstokloxeetf, date: 2026-10-07, title: AI电力投资研究：VST、OKLO、XE与六只美股能源、核能ETF}
+    history: []
+
+  - ticker: GRID
+    symbol: GRID
+    name: 智能电网 ETF（First Trust）
+    kind: etf
+    currency: USD
+    tags: {industry: 电力与公用事业, chain: 能源电力, market: 美股ETF}
+    ref: {price: 184.31, date: 2026-10-06}
+    summary: 除发电企业外最值得关注的方向；168—175美元第一批，155—165美元主要买入区。
+    zones:
+      - {type: starter, low: 168, high: 175, action: 第一批}
+      - {type: buy, low: 155, high: 165, action: 主要买入区}
+    conditions:
+      - ETF区间为回撤预算与分批建仓规则，并非精确内在价值
+    posts:
+      - {slug: aivstokloxeetf, date: 2026-10-07, title: AI电力投资研究：VST、OKLO、XE与六只美股能源、核能ETF}
+    history: []
+
+  - ticker: URA
+    symbol: URA
+    name: 铀 ETF（Global X）
+    kind: etf
+    currency: USD
+    tags: {industry: 核能与铀, chain: 能源电力, market: 美股ETF}
+    ref: {price: 41.80, date: 2026-10-06}
+    summary: 偏向铀与核能组件；37—39美元第一批，33—35美元主要买入区。
+    zones:
+      - {type: starter, low: 37, high: 39, action: 第一批}
+      - {type: buy, low: 33, high: 35, action: 主要买入区}
+    conditions:
+      - ETF区间为回撤预算与分批建仓规则，并非精确内在价值
+    posts:
+      - {slug: aivstokloxeetf, date: 2026-10-07, title: AI电力投资研究：VST、OKLO、XE与六只美股能源、核能ETF}
+    history: []
+
+  - ticker: URNM
+    symbol: URNM
+    name: 铀矿 ETF（Sprott）
+    kind: etf
+    currency: USD
+    tags: {industry: 核能与铀, chain: 能源电力, market: 美股ETF}
+    ref: {price: 50.30, date: 2026-10-06}
+    summary: 更集中的铀矿工具，适合有明确铀矿判断的进攻性配置；44—47美元第一批，39—42美元主要买入区。
+    zones:
+      - {type: starter, low: 44, high: 47, action: 第一批}
+      - {type: buy, low: 39, high: 42, action: 主要买入区}
+    conditions:
+      - ETF区间为回撤预算与分批建仓规则，并非精确内在价值
+    posts:
+      - {slug: aivstokloxeetf, date: 2026-10-07, title: AI电力投资研究：VST、OKLO、XE与六只美股能源、核能ETF}
+    history: []
+
+  - ticker: XLE
+    symbol: XLE
+    name: 能源 ETF（SPDR）
+    kind: etf
+    currency: USD
+    tags: {industry: 传统能源, chain: 能源电力, market: 美股ETF}
+    ref: {price: 63.75, date: 2026-10-06}
+    summary: 油气周期为主，与AI电力关联较间接；58—61美元第一批，53—56美元主要买入区。
+    zones:
+      - {type: starter, low: 58, high: 61, action: 第一批}
+      - {type: buy, low: 53, high: 56, action: 主要买入区}
+    conditions:
+      - ETF区间为回撤预算与分批建仓规则，并非精确内在价值
+    posts:
+      - {slug: aivstokloxeetf, date: 2026-10-07, title: AI电力投资研究：VST、OKLO、XE与六只美股能源、核能ETF}
+    history: []

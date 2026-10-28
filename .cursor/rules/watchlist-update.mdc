@@ -1,0 +1,26 @@
+---
+description: 用户说「更新个股」「录入新帖」「Substack 有更新」或要求修改个股计划 / 目标价 / 买入区间时使用
+alwaysApply: false
+---
+
+# 更新个股计划（Substack「Zane说美股」→ 个股计划看板）
+
+数据流：`pipeline/substack.py` 缓存原文到 `data/substack/<slug>.md` → 人工/AI 提取写入 `config/watchlist.yaml` → `pipeline/stocks.py` 抓价判定状态 → `site/data/stocks.json` → 页面 `#/stocks`。
+
+## 步骤
+
+1. 同步帖子并列出待录入：`.\.venv\Scripts\python.exe -m pipeline.substack`（本机走代理即可访问）。
+2. 逐篇阅读 `data/substack/<slug>.md`，对文中每只给出价格计划的标的：
+   - 已存在于 `watchlist.yaml`：把新帖插到 `posts` 列表最前面；目标价或区间有变化时，在 `history` 追加一条 `{date, slug, note}` 说明「由 X 调整为 Y 及原因」，再改正文字段。
+   - 新标的：按文件头部的字段说明新增条目；先用 yfinance 核实 `symbol`（港股为 `0100.HK` 这种格式）。
+   - `tags` 必须用 `config/categories.yaml` 中已有的组名；确需新组时同步把组名加入对应 `order`。
+3. 提取口径：
+   - 三档目标价只填帖子明确写出的数字，未写的留空，不自行推算；目标时点不是 2027 年底时改 `target_year`。
+   - 区间类型：试探/第一笔/小仓 = `starter`；主要建仓/主要买入 = `buy`；进一步加仓 = `add`；需复核下跌原因的最低一档 = `deep`；停止加仓/重新评估 = `reassess`；分批兑现/减仓 = `trim`。
+   - 「X 附近」写成 `low/high` 区间时，在汇报中说明取值；只有单边的用 `low` 或 `high` 单边。
+   - 仓位比例写入 `size`，预留资金写入 `reserve`，「跌破 X 暂停加仓」写入 `guards`。
+   - flow 映射（`{...}`）里的文字不要用英文逗号和英文冒号，用中文标点。
+   - 不含个股计划的帖子把 slug 加入 `ignored_posts`。
+4. 验证：`.\.venv\Scripts\python.exe -W ignore -m pipeline.stocks`，确认无报错、待录入为 0，并检查新标的状态是否合理。
+5. 提交推送：`git add config/watchlist.yaml config/categories.yaml data/substack site/data/stocks.json`，提交信息写明录入了哪些帖子和标的，`git push` 后 GitHub Actions 自动发布。
+6. 向用户汇报：新增/修改了哪些标的、目标价与区间变化、有歧义的取值。

@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 import yaml
 
-from . import fetch, fundamental as fd, model, technical as ta
+from . import fetch, fundamental as fd, model, stocks, technical as ta
 from .events import load_events
 
 OUT = fetch.ROOT / "site" / "data"
@@ -213,6 +213,11 @@ def main() -> None:
         "indices": summary_items, "events": events, "status": fetch.STATUS,
     })
     print(f"完成：{len(summary_items)} 个指数，数据源 {sum(s['ok'] for s in fetch.STATUS)}/{len(fetch.STATUS)} 正常")
+
+    try:
+        stocks.main()
+    except Exception as e:  # noqa: BLE001
+        print(f"个股计划更新失败（不影响大盘数据）：{type(e).__name__}: {e}")
 
 
 if __name__ == "__main__":

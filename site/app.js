@@ -84,6 +84,7 @@
     const s = state.summary;
     const upcoming = s.events.filter((e) => e.date >= s.today).slice(0, 10);
     app.innerHTML = `
+      <div id="stkStrip"></div>
       <section class="hero">
         <div class="hero-head">
           <div><h2>各指数多空结论</h2>
@@ -118,6 +119,7 @@
     document.querySelectorAll(".card").forEach((el) => el.addEventListener("click", () => (location.hash = `#/index/${el.dataset.id}`)));
     renderHeat();
     renderDist();
+    homeStockStrip();
   }
 
   function cardHTML(it) {
@@ -454,6 +456,300 @@
     </div>`;
   }
 
+  // ---------------- 个股计划 ----------------
+  const REPO = "https://github.com/chenzhi123/market-trend-dashboard";
+  const ST_COLOR = { below_plan: "#c77dff", deep: "#e0457b", add: "#ff4d4f", buy: "#ff7a45", starter: "#f0b429",
+    near: "#4ea8ff", watch: "#8c97ad", reassess: "#5cd6a0", trim: "#13c27a", nodata: "#5b6b8c" };
+  const ZONE_COLOR = { starter: "#f0b429", buy: "#ff7a45", add: "#ff4d4f", deep: "#e0457b", reassess: "#5cd6a0", trim: "#13c27a" };
+  const ST_ORDER = ["below_plan", "deep", "add", "buy", "starter", "near", "watch", "reassess", "trim", "nodata"];
+  const BUY_T = ["starter", "buy", "add", "deep"];
+  const TG = [["bear", "悲观"], ["base", "中性"], ["bull", "乐观"]];
+  const sk = { dim: null, sort: "status", q: "", only: false };
+
+  async function getStocks(force = false) {
+    const key = "data/stocks.json";
+    if (state.cache[key] && !force) return state.cache[key];
+    const r = await fetch(`${key}?t=${Date.now()}`);
+    if (!r.ok) throw new Error(`${key} ${r.status}`);
+    return (state.cache[key] = await r.json());
+  }
+
+  const num = (v) => (v == null ? "-" : Number(v).toLocaleString("zh-CN", { maximumFractionDigits: 2 }));
+  const cur = (s) => (s.currency === "HKD" ? "HK$" : "$");
+  const zr = (z) => (z.low != null && z.high != null ? `${num(z.low)}–${num(z.high)}` : z.low != null ? `≥ ${num(z.low)}` : `≤ ${num(z.high)}`);
+  const daysSince = (d, today) => (d ? (new Date(today) - new Date(d)) / 864e5 : Infinity);
+  const isNew = (s, d) => s.status.level !== "none" && daysSince(s.status.since, d.generated_at.slice(0, 10)) <= 3;
+  const sBadge = (s, d) => `<span class="sbadge" style="--c:${ST_COLOR[s.status.key]}">${s.status.label}</span>${d && isNew(s, d) ? '<span class="new">新</span>' : ""}`;
+  const topBuy = (s) => s.zones.filter((z) => BUY_T.includes(z.type)).sort((a, b) => b.high - a.high)[0];
+  const byStatus = (a, b) => ST_ORDER.indexOf(a.status.key) - ST_ORDER.indexOf(b.status.key) || (a.metrics.dist_to_buy ?? 1e9) - (b.metrics.dist_to_buy ?? 1e9);
+
+  function planText(s) {
+    const st = s.status, z = st.zone;
+    if (st.key === "below_plan") return `已低于计划最低一档（${zr(z)}），先复核基本面再决定是否继续买入`;
+    if (st.key === "near") return `距第一档 ${zr(z)} 还差 ${((1 - z.high / s.price.last) * 100).toFixed(1)}%：${z.action}`;
+    if (!z) return "";
+    return `${z.name} ${zr(z)}${z.size ? ` · 仓位 ${z.size}` : ""} · ${z.action}`;
+  }
+
+  function ladderHTML(s, big = false) {
+    const p = s.price?.last, t = s.targets || {};
+    const vals = [p, t.bear, t.base, ...s.zones.flatMap((z) => [z.low, z.high])].filter((v) => v != null);
+    let lo = Math.min(...vals), hi = Math.max(...vals);
+    if (t.bull != null && t.bull <= hi * 1.3) hi = Math.max(hi, t.bull);
+    const pad = (hi - lo) * 0.05 || 1;
+    lo -= pad; hi += pad;
+    const x = (v) => ((v - lo) / (hi - lo)) * 100;
+    const segs = s.zones.map((z) => {
+      const a = z.low ?? lo, b = z.high ?? hi;
+      return `<i class="lz" style="left:${x(a)}%;width:${Math.max(x(b) - x(a), 0.8)}%;background:${ZONE_COLOR[z.type]}" title="${z.name} ${zr(z)}"></i>`;
+    }).join("");
+    const ticks = TG.filter(([k]) => t[k] != null && t[k] >= lo && t[k] <= hi)
+      .map(([k, n]) => `<b class="lt" style="left:${x(t[k])}%" title="${n} ${num(t[k])}"><em>${n}</em></b>`).join("");
+    const mark = p != null ? `<span class="lp" style="left:${x(p)}%"><em class="num">${num(p)}</em></span>` : "";
+    return `<div class="ladder ${big ? "big" : ""}"><div class="track">${segs}${ticks}${mark}</div></div>`;
+  }
+
+  function stockCard(s, d) {
+    const p = s.price || {}, t = s.targets, m = s.metrics;
+    const tb = topBuy(s);
+    const foot = s.status.zone || s.status.key === "near" ? planText(s)
+      : tb && p.last ? `距第一档 ${zr(tb)} 还差 ${((1 - tb.high / p.last) * 100).toFixed(1)}%` : "";
+    return `<div class="scard" data-t="${s.ticker}" style="--c:${ST_COLOR[s.status.key]}">
+      <div class="card-head">
+        <div><span class="card-name">${esc(s.name)}</span><span class="tag">${s.symbol}</span><span class="tag">${esc(s.tags.industry)}</span></div>
+        <div>${sBadge(s, d)}</div>
+      </div>
+      <div class="row" style="gap:10px;align-items:baseline;margin-top:2px">
+        <span class="price num">${cur(s)}${num(p.last)}</span><span class="chg num ${sgn(p.chg1d)}">${pct(p.chg1d)}</span>
+        <span class="note">${p.date ?? ""}${p.stale ? ' <span class="imp-high">未更新</span>' : ""}</span>
+      </div>
+      ${ladderHTML(s)}
+      ${t ? `<div class="tg3">${TG.map(([k, n]) => `<div><div class="note">${n}${k === "base" ? ` · ${s.target_year}年底` : ""}</div>
+        <div class="num tv">${num(t[k])}</div><div class="num ${sgn(m["upside_" + k])}" style="font-size:12px">${pct(m["upside_" + k])}</div></div>`).join("")}</div>`
+        : '<div class="note" style="margin:6px 0">ETF：没有目标价，按回撤预算分批建仓</div>'}
+      <div class="sfoot">${esc(foot)}</div>
+    </div>`;
+  }
+
+  function alertRow(s, d) {
+    const p = s.price, t = s.targets;
+    const guards = s.guards_hit.map((g) => `<div class="imp-high" style="font-size:12px">⚠ ${esc(g.note)}</div>`).join("");
+    return `<div class="arow" data-t="${s.ticker}" style="--c:${ST_COLOR[s.status.key]}">
+      <div><b>${esc(s.name)}</b> <span class="tag">${s.symbol}</span></div>
+      <div class="num">${cur(s)}${num(p.last)} <span class="${sgn(p.chg1d)}" style="font-size:12px">${pct(p.chg1d)}</span></div>
+      <div>${sBadge(s, d)}</div>
+      <div class="a-plan">${esc(planText(s))}${guards}</div>
+      <div class="note num">${t ? `中性 ${num(t.base)}（${pct(s.metrics.upside_base)}）` : "ETF"}</div>
+    </div>`;
+  }
+
+  async function renderStocks(force = false) {
+    setNav("stocks");
+    if (!state.cache["data/stocks.json"]) app.innerHTML = '<div class="loading">加载中…</div>';
+    const d = await getStocks(force);
+    const dims = d.categories.dimensions;
+    sk.dim ??= d.categories.default;
+    const L = (lv) => d.stocks.filter((s) => s.status.level === lv).sort(byStatus);
+    const [buy, near, sell] = [L("alert"), L("near"), L("sell")];
+    const sub = d.substack;
+    app.innerHTML = `
+      <div class="detail-head" style="align-items:center">
+        <div><h1>个股计划看板</h1>
+          <div class="note">来源 <a class="link" href="${sub.url}" target="_blank">Substack · Zane说美股</a>（${sub.count} 篇）· 价格更新 ${d.generated_at}（北京时间）· 状态按收盘价判定</div></div>
+        <div class="row" style="margin-left:auto;gap:8px">
+          <button class="btn" id="refresh">刷新数据</button>
+          <a class="btn" href="${REPO}/actions/workflows/update.yml" target="_blank" title="在 GitHub Actions 中手动运行一次，约 3 分钟后刷新页面">立即抓价 ↗</a>
+        </div>
+      </div>
+      ${sub.pending.length ? `<div class="warn-box">Substack 有 <b>${sub.pending.length}</b> 篇新帖子尚未录入计划：
+        ${sub.pending.map((p) => `<a class="link" href="${p.url}" target="_blank">${p.date} ${esc(p.title)}</a>`).join("；")}
+        <div class="note">在 Cursor 中说「更新个股」即可提取并录入。</div></div>` : ""}
+      ${sub.ok ? "" : `<div class="note">Substack 暂时无法访问，帖子列表使用上次同步的结果（${esc(sub.error)}）。</div>`}
+      <div class="section-title">已进入买入 / 加仓区间 <span class="sub">${buy.length} 只 · 「新」表示 3 天内新进入该状态</span></div>
+      <div class="panel alerts">${buy.length ? buy.map((s) => alertRow(s, d)).join("") : '<div class="note">暂无</div>'}</div>
+      <div class="grid2" style="margin-top:14px">
+        <div class="panel"><div class="group-title" style="margin-top:0;color:${ST_COLOR.near}">接近买入区（距第一档 ≤ ${d.near_pct}%）</div>
+          <div class="alerts compact">${near.length ? near.map((s) => alertRow(s, d)).join("") : '<div class="note">暂无</div>'}</div></div>
+        <div class="panel"><div class="group-title" style="margin-top:0;color:${ST_COLOR.trim}">已到重新评估 / 兑现区</div>
+          <div class="alerts compact">${sell.length ? sell.map((s) => alertRow(s, d)).join("") : '<div class="note">暂无</div>'}</div></div>
+      </div>
+      <div class="section-title">全部标的 <span class="sub">${d.stocks.length} 只 · 点击卡片查看完整交易计划</span></div>
+      <div class="toolbar">
+        <span class="note">分组</span>
+        <div class="seg" id="dimSeg">${dims.map((x) => `<button data-k="${x.key}" class="${x.key === sk.dim ? "on" : ""}">${x.name}</button>`).join("")}</div>
+        <span class="note">排序</span>
+        <select id="sortSel">
+          ${[["status", "状态优先"], ["dist", "距买入区最近"], ["upside", "到中性目标空间最大"], ["chg", "今日跌幅最大"]]
+            .map(([k, n]) => `<option value="${k}" ${k === sk.sort ? "selected" : ""}>${n}</option>`).join("")}
+        </select>
+        <label class="note"><input type="checkbox" id="onlyChk" ${sk.only ? "checked" : ""}> 只看提醒中的标的</label>
+        <input id="q" placeholder="搜索代码 / 名称" value="${esc(sk.q)}">
+        <span class="zone-legend" style="margin-left:auto">${["starter", "buy", "add", "deep", "reassess", "trim"].map((k) =>
+          `<span><i style="background:${ZONE_COLOR[k]}"></i>${{ starter: "试探", buy: "主要买入", add: "加仓", deep: "深度加仓", reassess: "重新评估", trim: "兑现" }[k]}</span>`).join("")}
+          <span><i style="background:#fff;width:3px"></i>现价</span></span>
+      </div>
+      <div id="groups"></div>`;
+    const draw = () => drawGroups(d);
+    draw();
+    document.getElementById("refresh").addEventListener("click", () => renderStocks(true));
+    document.getElementById("dimSeg").addEventListener("click", (e) => {
+      if (!e.target.dataset.k) return;
+      sk.dim = e.target.dataset.k;
+      document.querySelectorAll("#dimSeg button").forEach((b) => b.classList.toggle("on", b.dataset.k === sk.dim));
+      draw();
+    });
+    document.getElementById("sortSel").addEventListener("change", (e) => { sk.sort = e.target.value; draw(); });
+    document.getElementById("onlyChk").addEventListener("change", (e) => { sk.only = e.target.checked; draw(); });
+    document.getElementById("q").addEventListener("input", (e) => { sk.q = e.target.value; draw(); });
+    app.addEventListener("click", stockClick);
+  }
+
+  function stockClick(e) {
+    const el = e.target.closest("[data-t]");
+    if (el && !e.target.closest("a")) location.hash = `#/stock/${el.dataset.t}`;
+  }
+
+  function drawGroups(d) {
+    const dim = d.categories.dimensions.find((x) => x.key === sk.dim);
+    const q = sk.q.trim().toLowerCase();
+    let list = d.stocks.filter((s) => (!sk.only || s.status.level !== "none")
+      && (!q || `${s.ticker} ${s.name} ${s.symbol}`.toLowerCase().includes(q)));
+    const sorter = {
+      status: byStatus,
+      dist: (a, b) => (a.metrics.dist_to_buy ?? 1e9) - (b.metrics.dist_to_buy ?? 1e9),
+      upside: (a, b) => (b.metrics.upside_base ?? -1e9) - (a.metrics.upside_base ?? -1e9),
+      chg: (a, b) => (a.price?.chg1d ?? 1e9) - (b.price?.chg1d ?? 1e9),
+    }[sk.sort];
+    list = [...list].sort(sorter);
+    const groups = {};
+    list.forEach((s) => {
+      const g = dim.key === "status" ? s.status.label : s.tags[dim.key] || "未分类";
+      (groups[g] ??= []).push(s);
+    });
+    const order = dim.order || [];
+    const names = Object.keys(groups).sort((a, b) => (order.indexOf(a) + 1 || 999) - (order.indexOf(b) + 1 || 999));
+    document.getElementById("groups").innerHTML = names.length ? names.map((g) => {
+      const items = groups[g];
+      const hot = items.filter((s) => s.status.level === "alert").length;
+      return `<div class="section-title">${esc(g)} <span class="sub">${items.length} 只${hot ? ` · <b style="color:${ST_COLOR.buy}">${hot} 只在买入区间</b>` : ""}</span></div>
+        <div class="cards">${items.map((s) => stockCard(s, d)).join("")}</div>`;
+    }).join("") : '<div class="loading">没有符合条件的标的</div>';
+  }
+
+  async function renderStock(tk) {
+    setNav("stocks");
+    app.innerHTML = '<div class="loading">加载中…</div>';
+    const d = await getStocks();
+    const s = d.stocks.find((x) => x.ticker === tk);
+    if (!s) { app.innerHTML = `<div class="loading">未找到 ${esc(tk)}，<a class="link" href="#/stocks">返回个股计划</a></div>`; return; }
+    const p = s.price || {}, t = s.targets, m = s.metrics;
+    const zones = [...s.zones].sort((a, b) => (b.high ?? b.low) - (a.high ?? a.low));
+    const rows = [];
+    let placed = p.last == null;
+    zones.forEach((z) => {
+      if (!placed && p.last > (z.high ?? z.low)) {
+        rows.push(`<tr class="now"><td colspan="5">◆ 现价 ${cur(s)}${num(p.last)} · ${s.status.label}</td></tr>`);
+        placed = true;
+      }
+      const sell = !BUY_T.includes(z.type);
+      const edge = sell ? z.low : z.high;
+      const dist = p.last && edge ? (edge / p.last - 1) * 100 : null;
+      const zc = s.status.zone;
+      const isCur = zc && s.status.key === z.type && z.low === zc.low && z.high === zc.high;
+      rows.push(`<tr class="${isCur ? "cur" : ""}">
+        <td><span class="zdot" style="background:${ZONE_COLOR[z.type]}"></span>${z.name}</td>
+        <td class="num">${zr(z)}</td><td class="num">${esc(z.size ?? "-")}</td><td>${esc(z.action)}</td>
+        <td class="num ${sgn(dist)}">${dist == null ? "-" : pct(dist)}</td></tr>`);
+    });
+    if (!placed) rows.push(`<tr class="now"><td colspan="5">◆ 现价 ${cur(s)}${num(p.last)} · ${s.status.label}</td></tr>`);
+    const list = (title, arr, cls = "") => (arr && arr.length ? `<div class="group-title">${title}</div><ul class="plist ${cls}">${arr.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : "");
+    app.innerHTML = `
+      <div class="detail-head">
+        <div><a class="note" href="#/stocks">← 返回个股计划</a>
+          <h1>${esc(s.name)} <span class="tag">${s.symbol}</span><span class="tag">${esc(s.tags.market)}</span><span class="tag">${esc(s.tags.industry)}</span></h1></div>
+        <div class="kv"><span class="k">最新收盘（${p.date ?? "-"}）</span><span class="v num">${cur(s)}${num(p.last)}</span></div>
+        ${[["日涨跌", p.chg1d], ["近5日", p.chg5d], ["近20日", p.chg20d], ["相对发帖参考价", m.vs_ref]]
+          .map(([k, v]) => `<div class="kv"><span class="k">${k}</span><span class="v num ${sgn(v)}">${pct(v)}</span></div>`).join("")}
+        <div class="kv"><span class="k">当前状态</span><span class="v">${sBadge(s, d)}</span></div>
+      </div>
+      <div class="panel" style="margin-top:16px;--c:${ST_COLOR[s.status.key]};border-left:4px solid var(--c)">
+        <div style="font-size:15px;font-weight:600">${esc(s.summary)}</div>
+        <div class="note" style="margin-top:4px">${esc(planText(s))}</div>
+        ${s.guards_hit.map((g) => `<div class="imp-high" style="margin-top:4px">⚠ 已触发复核线：${esc(g.note)}</div>`).join("")}
+        ${ladderHTML(s, true)}
+      </div>
+      <div class="grid2" style="margin-top:14px">
+        <div class="panel">
+          <div class="section-title" style="margin-top:0">交易计划 <span class="sub">距现价 = 现价需变动多少才进入该档</span></div>
+          <table class="plan"><thead><tr><th>档位</th><th>价格区间</th><th>仓位</th><th>计划动作</th><th>距现价</th></tr></thead>
+            <tbody>${rows.join("")}</tbody></table>
+          ${s.reserve ? `<div class="note" style="margin-top:8px">预留资金：${esc(s.reserve)}</div>` : ""}
+          ${(s.guards || []).map((g) => `<div class="note">复核线：${cur(s)}${num(g.below)} 以下 · ${esc(g.note)}</div>`).join("")}
+          ${list("计划成立的前提", s.conditions)}
+          ${list("需要下调估值 / 放弃计划的信号", s.invalidation, "warn")}
+        </div>
+        <div class="panel">
+          <div class="section-title" style="margin-top:0">${t ? `${s.target_year} 年底情景目标价` : "ETF 说明"} <span class="sub">${cur(s) === "HK$" ? "港元" : "美元"}</span></div>
+          ${t ? `<div class="tg3 big">${TG.map(([k, n]) => `<div><div class="note">${n}</div><div class="num tv">${num(t[k])}</div>
+            <div class="num ${sgn(m["upside_" + k])}">${pct(m["upside_" + k])}</div></div>`).join("")}</div>` : ""}
+          ${list("估值关键假设", s.assumptions)}
+          ${s.quotes?.length ? `<div class="group-title">原文摘录</div>${s.quotes.map((q) => `<blockquote>${esc(q)}</blockquote>`).join("")}` : ""}
+          <div class="group-title">来源帖子</div>
+          ${s.posts.map((x) => `<div><a class="link" href="${x.url}" target="_blank">${x.date} · ${esc(x.title)} ↗</a></div>`).join("")}
+          ${s.ref ? `<div class="note">发帖参考价 ${cur(s)}${num(s.ref.price)}（${s.ref.date}）</div>` : ""}
+          ${s.history?.length ? `<div class="group-title">修订历史</div>${s.history.map((h) => `<div class="note">${h.date} · ${esc(h.note)}</div>`).join("")}` : ""}
+        </div>
+      </div>
+      <div class="section-title">近一年走势与计划区间 <span class="sub">色带为计划区间，虚线为情景目标价，竖线为发帖日</span></div>
+      <div class="panel"><div id="stkChart" style="height:460px"></div></div>`;
+    if (s.chart?.length) drawStockChart(s);
+  }
+
+  function drawStockChart(s) {
+    const closes = s.chart.map((x) => x[1]);
+    const hMin = Math.min(...closes), hMax = Math.max(...closes);
+    const t = s.targets || {};
+    const cand = [hMin, hMax, ...s.zones.flatMap((z) => [z.low, z.high]), t.bear, t.base].filter((v) => v != null && v < hMax * 1.8 && v > hMin * 0.5);
+    const lo = Math.min(...cand) * 0.95, hi = Math.max(...cand) * 1.05;
+    const first = s.chart[0][0];
+    chart(document.getElementById("stkChart")).setOption({
+      animation: false,
+      grid: { left: 60, right: 90, top: 20, bottom: 50 },
+      tooltip: { trigger: "axis", backgroundColor: "#121826", borderColor: C.line, textStyle: { color: C.text } },
+      xAxis: { type: "time", axisLabel: { color: C.muted }, axisLine: { lineStyle: { color: C.line } } },
+      yAxis: { type: "value", min: +lo.toPrecision(4), max: +hi.toPrecision(4), splitLine: { lineStyle: { color: C.line } },
+        axisLabel: { color: C.muted, showMinLabel: false, showMaxLabel: false } },
+      dataZoom: [{ type: "inside" }, { type: "slider", bottom: 8, height: 16, borderColor: C.line, textStyle: { color: C.muted } }],
+      series: [{
+        name: "收盘价", type: "line", data: s.chart, symbol: "none", lineStyle: { width: 1.5, color: "#e6edf7" },
+        markArea: { silent: true, label: { show: false }, data: s.zones.map((z) => [
+          { yAxis: z.low ?? lo, name: `${z.name} ${zr(z)}`, itemStyle: { color: ZONE_COLOR[z.type], opacity: 0.18 } },
+          { yAxis: Math.min(z.high ?? hi, hi) }]) },
+        markLine: { silent: true, symbol: "none", data: [
+          ...TG.filter(([k]) => t[k] != null && t[k] >= lo && t[k] <= hi).map(([k, n]) => ({ yAxis: t[k],
+            lineStyle: { type: "dashed", color: k === "base" ? C.accent : C.muted },
+            label: { formatter: `${n} ${num(t[k])}`, color: k === "base" ? C.accent : C.muted, position: "end" } })),
+          ...s.posts.filter((x) => x.date >= first).map((x) => ({ xAxis: x.date,
+            lineStyle: { type: "dotted", color: "#4ea8ff" }, label: { formatter: "发帖", color: "#4ea8ff", position: "end" } })),
+        ] },
+      }],
+    });
+  }
+
+  async function homeStockStrip() {
+    try {
+      const d = await getStocks();
+      const el = document.getElementById("stkStrip");
+      if (!el) return;
+      const a = d.stocks.filter((s) => s.status.level === "alert").sort(byStatus);
+      const n = d.stocks.filter((s) => s.status.level === "near").length;
+      el.innerHTML = `<a class="stk-strip" href="#/stocks"><b>个股提醒</b>
+        <span>${a.length} 只处于买入 / 加仓区间${n ? `，${n} 只接近买入区` : ""}${d.substack.pending.length ? `，${d.substack.pending.length} 篇新帖待录入` : ""}</span>
+        <span class="strip-list">${a.slice(0, 10).map((s) => `<span class="sbadge" style="--c:${ST_COLOR[s.status.key]}">${s.currency === "HKD" ? esc(s.name) : s.ticker} · ${s.status.label}</span>`).join("")}</span>
+        <span class="note" style="margin-left:auto">查看个股计划 →</span></a>`;
+    } catch (e) { /* 个股数据缺失时不影响总览 */ }
+  }
+
   // ---------------- 路由 ----------------
   async function route() {
     disposeCharts();
@@ -461,6 +757,8 @@
     const h = location.hash.replace(/^#\/?/, "");
     try {
       if (h.startsWith("index/")) await renderIndex(h.slice(6));
+      else if (h === "stocks") await renderStocks();
+      else if (h.startsWith("stock/")) await renderStock(decodeURIComponent(h.slice(6)));
       else if (h === "macro") await renderMacro();
       else if (h === "events") renderEvents();
       else if (h === "method") renderMethod();
