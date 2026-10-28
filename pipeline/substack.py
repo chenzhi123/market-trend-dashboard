@@ -17,7 +17,11 @@ PUB = "https://yiwei465.substack.com"
 POSTS_DIR = ROOT / "data" / "substack"
 INDEX = POSTS_DIR / "index.json"
 WATCHLIST = ROOT / "config" / "watchlist.yaml"
-HEADERS = {"User-Agent": "Mozilla/5.0 (market-trend-dashboard)"}
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36",
+    "Accept": "application/json, text/xml, */*",
+    "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+}
 
 
 class _ToMarkdown(HTMLParser):
@@ -85,6 +89,22 @@ def list_posts() -> list[dict]:
         offset += 50
 
 
+def list_posts_rss() -> tuple[list[dict], dict[str, str]]:
+    """RSS 备用通道（archive 接口被拦截时使用），返回帖子列表与 slug→正文 HTML。"""
+    import xml.etree.ElementTree as ET
+    from email.utils import parsedate_to_datetime
+    root = ET.fromstring(_get(f"{PUB}/feed").content)
+    ns = {"content": "http://purl.org/rss/1.0/modules/content/"}
+    posts, bodies = [], {}
+    for it in root.iter("item"):
+        link = it.findtext("link") or ""
+        slug = link.rstrip("/").rsplit("/p/", 1)[-1]
+        posts.append({"slug": slug, "title": it.findtext("title") or "", "subtitle": it.findtext("description") or "",
+                      "post_date": parsedate_to_datetime(it.findtext("pubDate")).isoformat(), "canonical_url": link})
+        bodies[slug] = it.findtext("content:encoded", namespaces=ns) or ""
+    return posts, bodies
+
+
 def recorded_slugs() -> set[str]:
     if not WATCHLIST.exists():
         return set()
@@ -100,7 +120,11 @@ def sync() -> dict:
     """返回 {"posts": [...], "pending": [...], "ok": bool, "error": str|None}。网络失败时回退到本地索引。"""
     POSTS_DIR.mkdir(parents=True, exist_ok=True)
     try:
-        raw = list_posts()
+        bodies: dict[str, str] = {}
+        try:
+            raw = list_posts()
+        except Exception:  # noqa: BLE001
+            raw, bodies = list_posts_rss()
         posts = [{"slug": p["slug"], "title": p["title"], "subtitle": p.get("subtitle") or "",
                   "date": p["post_date"][:10], "url": p.get("canonical_url") or f"{PUB}/p/{p['slug']}",
                   "audience": p.get("audience")} for p in raw]
@@ -108,7 +132,7 @@ def sync() -> dict:
             path = POSTS_DIR / f"{p['slug']}.md"
             if path.exists():
                 continue
-            body = _get(f"{PUB}/api/v1/posts/{p['slug']}").json().get("body_html") or ""
+            body = bodies.get(p["slug"]) or _get(f"{PUB}/api/v1/posts/{p['slug']}").json().get("body_html") or ""
             head = f"# {p['title']}\n\n> {p['subtitle']}\n\n日期：{p['date']}  链接：{p['url']}\n\n"
             path.write_text(head + html_to_md(body), encoding="utf-8")
             print(f"  缓存帖子 {p['date']} {p['title']}")
