@@ -35,8 +35,12 @@ try {
     git pull --rebase --autostash
     if ($LASTEXITCODE -ne 0) { throw "git pull 失败" }
 
-    & (Join-Path $root ".venv\Scripts\python.exe") -W ignore -m pipeline.stocks 2>&1 | ForEach-Object { Write-Log $_ }
-    if ($LASTEXITCODE -ne 0) { throw "pipeline.stocks 失败" }
+    $py = Join-Path $root ".venv\Scripts\python.exe"
+    $pyLog = Join-Path $logDir "stocks.out"
+    & $py -W ignore -m pipeline.stocks *> $pyLog
+    $code = $LASTEXITCODE
+    Get-Content $pyLog -ErrorAction SilentlyContinue | ForEach-Object { Write-Log $_ }
+    if ($code -ne 0) { throw "pipeline.stocks 失败（退出码 $code）" }
 
     git add -- data/substack site/data/stocks.json
     $caches = Get-ChildItem (Join-Path $root "data\cache\stk_*.csv") -ErrorAction SilentlyContinue
