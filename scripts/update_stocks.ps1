@@ -38,9 +38,11 @@ try {
     $py = Join-Path $root ".venv\Scripts\python.exe"
     $pyOut = Join-Path $logDir "stocks.out"
     $pyErr = Join-Path $logDir "stocks.err"
+    $env:PYTHONIOENCODING = "utf-8"
+    $env:PYTHONWARNINGS = "ignore"
     $proc = Start-Process -FilePath $py -ArgumentList "-W","ignore","-m","pipeline.stocks" -WorkingDirectory $root -RedirectStandardOutput $pyOut -RedirectStandardError $pyErr -Wait -PassThru -WindowStyle Hidden
     foreach ($f in @($pyOut, $pyErr)) {
-        if (Test-Path $f) { Get-Content $f | ForEach-Object { Write-Log $_ } }
+        if (Test-Path $f) { Get-Content $f -Encoding utf8 | ForEach-Object { Write-Log $_ } }
     }
     if ($proc.ExitCode -ne 0) { throw "pipeline.stocks 失败（退出码 $($proc.ExitCode)）" }
 
