@@ -36,11 +36,13 @@ try {
     if ($LASTEXITCODE -ne 0) { throw "git pull 失败" }
 
     $py = Join-Path $root ".venv\Scripts\python.exe"
-    $pyLog = Join-Path $logDir "stocks.out"
-    & $py -W ignore -m pipeline.stocks *> $pyLog
-    $code = $LASTEXITCODE
-    Get-Content $pyLog -ErrorAction SilentlyContinue | ForEach-Object { Write-Log $_ }
-    if ($code -ne 0) { throw "pipeline.stocks 失败（退出码 $code）" }
+    $pyOut = Join-Path $logDir "stocks.out"
+    $pyErr = Join-Path $logDir "stocks.err"
+    $proc = Start-Process -FilePath $py -ArgumentList "-W","ignore","-m","pipeline.stocks" -WorkingDirectory $root -RedirectStandardOutput $pyOut -RedirectStandardError $pyErr -Wait -PassThru -WindowStyle Hidden
+    foreach ($f in @($pyOut, $pyErr)) {
+        if (Test-Path $f) { Get-Content $f | ForEach-Object { Write-Log $_ } }
+    }
+    if ($proc.ExitCode -ne 0) { throw "pipeline.stocks 失败（退出码 $($proc.ExitCode)）" }
 
     git add -- data/substack site/data/stocks.json
     $caches = Get-ChildItem (Join-Path $root "data\cache\stk_*.csv") -ErrorAction SilentlyContinue
