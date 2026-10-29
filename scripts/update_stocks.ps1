@@ -1,4 +1,4 @@
-# 每日更新个股：同步 Substack、刷新现价，有变化则提交并推送。
+﻿# 每日更新个股：同步 Substack、刷新现价，有变化则提交并推送。
 # 由「任务计划程序」里的「宏观研究-更新个股」调用，也可手动运行。
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
