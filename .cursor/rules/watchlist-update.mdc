@@ -7,6 +7,8 @@ alwaysApply: false
 
 数据流：`pipeline/substack.py` 缓存原文到 `data/substack/<slug>.md` → 人工/AI 提取写入 `config/watchlist.yaml` → `pipeline/stocks.py` 抓价判定状态 → `site/data/stocks.json` → 页面 `#/stocks`。
 
+每天 09:15（本机时间）计划任务「宏观研究-更新个股」会运行 `scripts/update_stocks.ps1`：同步帖子、刷新现价，有变化就提交推送。云端工作日任务也会刷新现价，但抓不到 Substack。本规则只在有待录入帖子、或用户要求改计划时做提取，不要重复建计划任务。
+
 ## 步骤
 
 1. 同步帖子并列出待录入：`.\.venv\Scripts\python.exe -m pipeline.substack`（本机走代理即可访问）。
