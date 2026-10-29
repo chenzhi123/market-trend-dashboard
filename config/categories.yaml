@@ -9,7 +9,7 @@ default: industry
 dimensions:
   - key: industry
     name: 行业
-    order: [存储, 半导体设备, 晶圆代工, 网络与定制芯片, AI服务器与电子制造, AI云与算力, AI大模型, 卫星通信, 电力与公用事业, 核能与铀, 传统能源]
+    order: [存储, 半导体设备, 晶圆代工, 网络与定制芯片, AI服务器与电子制造, AI云与算力, AI大模型, 互联网平台, 卫星通信, 电力与公用事业, 核能与铀, 传统能源]
 
   - key: chain
     name: AI产业链环节

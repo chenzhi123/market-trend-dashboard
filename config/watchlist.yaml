@@ -86,6 +86,41 @@ stocks:
       - {slug: "214", date: 2026-10-05, title: 西部数据深度分析：近一年涨超2倍，上周五盘中暴跌14%，现在是买入时机吗？}
     history: []
 
+  - ticker: STX
+    symbol: STX
+    name: 希捷
+    kind: stock
+    currency: USD
+    tags: {industry: 存储, chain: 芯片与存储, market: 美股}
+    target_year: 2027
+    targets: {bear: 400, base: 1000, bull: 1530}
+    ref: {price: 630, date: 2026-10-28}
+    summary: 中性1000美元（由1100下调）；620—650美元首仓30%，560—590美元加仓35%，500—540美元基本面未恶化时再配35%。
+    zones:
+      - {type: starter, low: 620, high: 650, action: 建立首仓, size: 30%}
+      - {type: add, low: 560, high: 590, action: 经营没有明显变化时进一步提高配置, size: 35%}
+      - {type: deep, low: 500, high: 540, action: 订单、毛利率和现金流预测仍然稳健才完成剩余仓位, size: 35%}
+      - {type: trim, low: 900, high: 1000, action: 盈利预测没有继续提高时开始评估减仓}
+      - {type: reassess, low: 1100, action: 经营仍符合当前中性假设时主动降低风险敞口}
+    conditions:
+      - 云存储容量持续增长、HAMR稳定放量、单位容量成本继续改善
+      - 下跌若已伴随盈利预期下修，先重新估值，不机械补仓
+    invalidation:
+      - 数据中心客户的容量出货安排出现实质性削减
+      - 单位TB收入明显下降，同时成本改善不足以抵消价格压力
+      - 毛利率连续恶化，未来两个季度的盈利指引被显著下修
+      - HAMR客户认证或量产转换出现持续性问题
+    assumptions:
+      - 中性：2028自然年收入250亿美元、毛利率58%、EPS约48美元×21倍
+      - 悲观：收入198亿、毛利率50%、EPS约29美元×14倍
+      - 乐观：收入290亿、毛利率63%、EPS约64美元×24倍
+    quotes:
+      - 630美元附近，我愿意开始分批买入；570美元附近，我愿意进一步提高配置；2027年底，我目前仍以1000美元作为中性估值目标。
+    posts:
+      - {slug: stx194630, date: 2026-10-28, title: STX利润暴涨194%，股价却暴跌8%，是否是买入机会？}
+    history:
+      - {date: 2026-10-28, slug: stx194630, note: 中性目标价由1100美元调整为1000美元（2028年EPS由约42美元上调至48美元，市盈率由26倍降至21倍）}
+
   - ticker: SNDK
     symbol: SNDK
     name: 闪迪
@@ -583,3 +618,37 @@ stocks:
     posts:
       - {slug: aivstokloxeetf, date: 2026-10-07, title: AI电力投资研究：VST、OKLO、XE与六只美股能源、核能ETF}
     history: []
+
+  # ---------------- 互联网平台 ----------------
+  - ticker: GOOGL
+    symbol: GOOGL
+    name: 谷歌
+    kind: stock
+    currency: USD
+    tags: {industry: 互联网平台, chain: 模型与应用, market: 美股}
+    target_year: 2027
+    targets: {bear: 240, base: 385, bull: 535}
+    ref: {price: 292.5, date: 2026-10-29}
+    summary: 中性385美元（由410下调）；290—300美元首仓25%，275—285美元再加30%，255—265美元重点加仓30%，235—245美元留15%。
+    zones:
+      - {type: starter, low: 290, high: 300, action: 财报后的初始建仓, size: 25%}
+      - {type: add, low: 275, high: 285, action: 搜索和Cloud中期盈利假设没有明显恶化时继续买入, size: 30%}
+      - {type: deep, low: 255, high: 265, action: 核心业务维持稳定时作为主要低价配置，需先确认不是更严重的盈利下修, size: 30%}
+      - {type: deep, low: 235, high: 245, action: 接近悲观情景的备用资金，不预设一定会跌到这里, size: 15%}
+      - {type: reassess, low: 340, high: 350, action: 经常性盈利预期尚未上修时不再追，剩余上涨空间收窄}
+      - {type: trim, low: 380, high: 400, action: 经营数据没有超预期改善时考虑降低仓位、兑现一部分收益}
+    conditions:
+      - 搜索业务维持稳定增长，Cloud继续受益于AI基础设施需求，但整体增速逐步回落
+    invalidation:
+      - 搜索收入增速连续两个季度低于10%，同时AI Mode商业化效率仍明显落后于传统搜索
+      - Cloud收入增长放缓，同时营业利润率从36.2%持续回落到30%以下
+      - 2027年资本开支持续上调、经营现金流跟不上，并且继续大规模发行普通股
+    assumptions:
+      - 中性：2027年收入约6250亿美元、Cloud约1830亿美元、经常性EPS约13.45美元×27.5倍，另加每股约15美元折价后投资价值
+      - 悲观：收入约5700亿、EPS约10.08美元×22.5倍；乐观：收入约6900亿、EPS约16.16美元×32倍
+    quotes:
+      - 290—300美元开始建仓，275—285美元进一步买入，255—265美元重点加仓，235—245美元保留最后一笔资金。
+    posts:
+      - {slug: "10103290", date: 2026-10-29, title: 谷歌财报后暴跌10%：云业务增长103%，290美元值得抄底吗？}
+    history:
+      - {date: 2026-10-29, slug: "10103290", note: 三档目标价由260、410、560美元调整为240、385、535美元（搜索增速放缓、资本开支上升、估值倍数下调）}
